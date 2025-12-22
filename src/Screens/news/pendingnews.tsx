@@ -204,16 +204,15 @@ const handlePhonePress = (phone): void => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, styles.rejectButton]}
-          onPress={(e) => handleReject(item._id || item.id, e)}
-          activeOpacity={0.7}
+          onPress={() => navigation.navigate('EditPendingNews'{mode:"REJECT",news:item,})}
+          // activeOpacity={0.7}
         >
           <Text style={styles.rejectButtonText}>Rejected</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[styles.actionButton, styles.approveButton]}
-          onPress={(e) => handleApprove(item._id || item.id, e)}
-          activeOpacity={0.7}
+          onPress={() => navigation.navigate('EditPendingNews'{mode:"APPROVE",news:item,})}
         >
           <Text style={styles.approveButtonText}>Approved</Text>
         </TouchableOpacity>

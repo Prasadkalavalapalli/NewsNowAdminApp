@@ -58,7 +58,7 @@ const LoginScreen = () => {
         id: '1',
         name: 'User Name',
         email: username,
-        role: 'user',
+        role: 'admin',
       });
 
       if (success) {

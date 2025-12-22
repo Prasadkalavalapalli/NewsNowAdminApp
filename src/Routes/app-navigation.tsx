@@ -19,6 +19,8 @@ import NewsViewScreen from '../Screens/news screen/newsview';
 import PrivacyPolicy from '../Screens/accounts/PrivacyPolicy';
 import AboutNewsNow from '../Screens/accounts/AboutNewsNow';
 import LoginScreen from '../Screens/login screens/login-screen';
+import EditPendingNews from '../Screens/news/EditPendingNews';
+import UploadScreen from '../Screens/news/UploadScreen';
 
 
 
@@ -61,6 +63,7 @@ const AdminHomeStack = () => (
 const UploadStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="NewsViewScreen" component={NewsViewScreen} />
+      <Stack.Screen name="UploadScreen" component={UploadScreen} />
 
 
     {/* Add more upload screens here */}
@@ -71,6 +74,7 @@ const NewsStatusStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="NewsStatusMain" component={NewsDashboard} />
     <Stack.Screen name="NewsDetails" component={NewsDetails} />
+     <Stack.Screen name="EditPendingNews" component={EditPendingNews} />
     {/* Add more news status screens here */}
    
   </Stack.Navigator>
