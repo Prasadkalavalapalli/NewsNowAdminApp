@@ -559,18 +559,8 @@ const NewsDetails = () => {
       >
         {/* News Content */}
         <View style={styles.newsContent}>
-          {/* Category Badge */}
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{news.category}</Text>
-          </View>
-          
-          {/* Headline */}
-          <Text style={styles.headline}>{news.headline}</Text>
-          
-          {/* Metadata */}
-          <NewsMetadata />
-          
-          {/* News Type Badges */}
+         
+         {/* News Type Badges */}
           {(news.isBreakingNews || news.isLiveNews) && (
             <View style={styles.newsTypeBadges}>
               {news.isBreakingNews && (
@@ -587,6 +577,10 @@ const NewsDetails = () => {
               )}
             </View>
           )}
+          
+          {/* Headline */}
+          <Text style={styles.headline}>{news.headline}</Text>
+         
           
           {/* Images */}
           <NewsImages />
@@ -605,6 +599,10 @@ const NewsDetails = () => {
             </View>
           )}
           
+           {/* Category Badge */}
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{news.category}</Text>
+          </View>
           {/* Source */}
           {news.source && (
             <View style={styles.sourceContainer}>
@@ -612,6 +610,15 @@ const NewsDetails = () => {
               <Text style={styles.sourceText}>{news.source}</Text>
             </View>
           )}
+
+
+           
+          {/* Metadata */}
+          <NewsMetadata />
+          
+          
+
+
         </View>
 
         {/* Action Buttons */}
@@ -639,19 +646,6 @@ const NewsDetails = () => {
           />
         </View>
 
-        {/* Related News */}
-        {relatedNews.length > 0 && (
-          <View style={styles.relatedNewsSection}>
-            <Text style={styles.relatedNewsTitle}>Related News</Text>
-            <FlatList
-              data={relatedNews}
-              renderItem={RelatedNewsItem}
-              keyExtractor={item => item._id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
-        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

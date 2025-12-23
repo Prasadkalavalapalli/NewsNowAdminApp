@@ -11,19 +11,21 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { useNavigation } from '@react-navigation/native';
-import { h, w } from '../../constants/dimensions';
 import { pallette } from '../helpers/colors';
 import { semibold, regular, medium } from '../helpers/fonts';
 import { userAPI } from '../../Axios/Api';
-import ReporterRegistration from '../Reporter Screens/ReporterRegister';
-import ReporterList from '../Reporter Screens/ReporterList';
+import UploadScreen from '../news/UploadScreen';
+import { Screen } from 'react-native-screens';
+import { AppContext, useAppContext } from '../../Store/contexts/app-context';
+
 
 const AdminDashboard = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any>(null);
-
+const { user } = useAppContext();
+  console.log(user);
   const fetchData = async () => {
     try {
       const data = await userAPI.fetchDashboardStats();
@@ -45,34 +47,67 @@ const AdminDashboard = () => {
     fetchData();
   };
 
-  const statCards = [
+  const overallStats = [
     {
       title: 'Total News',
       value: stats?.totalNews || 0,
       icon: 'newspaper',
       color: '#4361ee',
-      onPress: () => navigation.navigate('NewsList', { filter: 'all' }),
+      // onPress: () => navigation.navigate('NewsList', { filter: 'all' }),
+      onPress: () =>{},
     },
     {
       title: 'Pending',
       value: stats?.pendingNews || 0,
       icon: 'clock',
       color: '#ff9e00',
-      onPress: () => navigation.navigate('NewsList', { filter: 'pending' }),
+      // onPress: () => navigation.navigate('NewsList', { filter: 'pending' }),
+      onPress: () =>{},
     },
     {
       title: 'Verified',
       value: stats?.verifiedNews || 0,
       icon: 'circle-check',
       color: '#00b894',
-      onPress: () => navigation.navigate('NewsList', { filter: 'verified' }),
+      // onPress: () => navigation.navigate('NewsList', { filter: 'verified' }),
+      onPress: () =>{},
     },
     {
       title: 'Rejected',
       value: stats?.rejectedNews || 0,
       icon: 'circle-xmark',
       color: '#ff6b6b',
-      onPress: () => navigation.navigate('NewsList', { filter: 'rejected' }),
+      // onPress: () => navigation.navigate('NewsList', { filter: 'rejected' }),
+      onPress: () =>{},
+    },
+  ];
+
+  const todayStats = [
+    {
+      title: 'New Articles',
+      value: stats?.todayNewArticles || 0,
+      icon: 'arrow-up',
+      color: '#00b894',
+    },
+    {
+      title: 'Verified',
+      value: stats?.todayVerified || 0,
+      icon: 'check',
+      color: '#4361ee',
+    },
+    {
+      title: 'Pending',
+      value: stats?.verifiedNews || 0,
+      icon: 'clock',
+      color: '#00b894',
+     
+    },
+    {
+      title: 'Rejected',
+      value: stats?.rejectedNews || 0,
+      icon: 'circle-xmark',
+      color: '#ff6b6b',
+     
     },
   ];
 
@@ -82,14 +117,44 @@ const AdminDashboard = () => {
       value: stats?.totalReporters || 0,
       icon: 'users',
       color: '#6c5ce7',
-      onPress: () => navigation.navigate(ReporterList),
+      onPress: () => navigation.navigate('ReporterList'),
     },
     {
       title: 'Notifications',
       value: stats?.totalNotifications || 0,
       icon: 'bell',
       color: '#00cec9',
-      onPress: () => navigation.navigate('Notifications'),
+      onPress: () =>{},
+    },
+  ];
+
+  const quickActions = [
+          {
+  title: 'Add News',
+  icon: 'plus',
+  // onPress: () => navigation.navigate('upload', { screen: 'UploadScreen' }),
+  onPress: () =>{},
+  color: pallette.primary,
+},
+    {
+      title: 'Add Reporter',
+      icon: 'user-plus',
+      onPress: () => navigation.navigate('ReporterRegistration'),
+      color: pallette.primary,
+    },
+    {
+      title: 'Create Banner',
+      icon: 'megaphone',
+      // onPress: () => navigation.navigate('CreateBanner'),
+      onPress: () =>{},
+      color: pallette.primary,
+    },
+    {
+      title: 'Analytics',
+      icon: 'chart-column',
+      // onPress: () => navigation.navigate('Analytics'),
+      onPress: () =>{},
+      color: pallette.primary,
     },
   ];
 
@@ -103,13 +168,6 @@ const AdminDashboard = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-          <Icon name="arrows-rotate" size={20} color={pallette.primary} />
-        </TouchableOpacity>
-      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -117,18 +175,72 @@ const AdminDashboard = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={pallette.primary} />
         }
       >
-        {/* Stats Grid */}
-        <View style={styles.section}>
-          {/* <Text style={styles.sectionTitle}>News Overview</Text> */}
-          <View style={styles.grid}>
-            {statCards.map((card, index) => (
-              <TouchableOpacity key={index} style={styles.card} onPress={card.onPress}>
-                <View style={[styles.iconCircle, { backgroundColor: `${card.color}15` }]}>
-                  <Icon name={card.icon} size={22} color={card.color} />
+        {/* Overall Summary - Using Today's Summary style */}
+        <View style={styles.summaryBox}>
+<View style={styles.summaryHeader}>
+  <Text style={styles.summaryTitle}>Overall Summary</Text>
+  <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+    <Icon name="arrows-rotate" size={20} color={pallette.primary} />
+  </TouchableOpacity>
+</View>
+          
+          <View style={styles.summaryGrid}>
+            {overallStats.slice(0, 2).map((stat, index) => (
+              <TouchableOpacity key={index} style={styles.summaryItem} onPress={stat.onPress}>
+                <View style={[styles.summaryIcon, { backgroundColor: `${stat.color}15` }]}>
+                  <Icon name={stat.icon} size={16} color={stat.color} />
                 </View>
-                <Text style={styles.cardValue}>{card.value}</Text>
-                <Text style={styles.cardTitle}>{card.title}</Text>
+                <View>
+                  <Text style={styles.summaryLabel}>{stat.title}</Text>
+                  <Text style={styles.summaryValue}>{stat.value}</Text>
+                </View>
               </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryGrid}>
+            {overallStats.slice(2).map((stat, index) => (
+              <TouchableOpacity key={index} style={styles.summaryItem} onPress={stat.onPress}>
+                <View style={[styles.summaryIcon, { backgroundColor: `${stat.color}15` }]}>
+                  <Icon name={stat.icon} size={16} color={stat.color} />
+                </View>
+                <View>
+                  <Text style={styles.summaryLabel}>{stat.title}</Text>
+                  <Text style={styles.summaryValue}>{stat.value}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Today's Summary */}
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryTitle}>Today's Summary</Text>
+          <View style={styles.summaryRow}>
+            {todayStats.slice(0,2).map((stat, index) => (
+              <View key={index} style={styles.summaryItem}>
+                <View style={[styles.summaryIcon, { backgroundColor: `${stat.color}15` }]}>
+                  <Icon name={stat.icon} size={16} color={stat.color} />
+                </View>
+                <View>
+                  <Text style={styles.summaryLabel}>{stat.title}</Text>
+                  <Text style={styles.summaryValue}>{stat.value}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+           <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+            {todayStats.slice(2).map((stat, index) => (
+              <View key={index} style={styles.summaryItem}>
+                <View style={[styles.summaryIcon, { backgroundColor: `${stat.color}15` }]}>
+                  <Icon name={stat.icon} size={16} color={stat.color} />
+                </View>
+                <View>
+                  <Text style={styles.summaryLabel}>{stat.title}</Text>
+                  <Text style={styles.summaryValue}>{stat.value}</Text>
+                </View>
+              </View>
             ))}
           </View>
         </View>
@@ -147,55 +259,20 @@ const AdminDashboard = () => {
           </View>
         </View>
 
-        {/* Today's Summary */}
-        <View style={styles.summaryBox}>
-          <Text style={styles.summaryTitle}>Today's Summary</Text>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <View style={styles.summaryIcon}>
-                <Icon name="arrow-up" size={16} color="#00b894" />
-              </View>
-              <View>
-                <Text style={styles.summaryLabel}>New Articles</Text>
-                <Text style={styles.summaryValue}>{stats?.todayNewArticles || 0}</Text>
-              </View>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <View style={styles.summaryIcon}>
-                <Icon name="check" size={16} color="#4361ee" />
-              </View>
-              <View>
-                <Text style={styles.summaryLabel}>Verified</Text>
-                <Text style={styles.summaryValue}>{stats?.todayVerified || 0}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
         {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Icon name="plus" size={18} color={pallette.primary} />
-              <Text style={styles.actionText}>Add News</Text>
-            </TouchableOpacity>
-          <TouchableOpacity 
-  style={styles.actionBtn} 
-  onPress={() => navigation.navigate('ReporterRegistration')}
->
-  <Icon name="user-plus" size={18} color={pallette.primary} />
-  <Text style={styles.actionText}>Add Reporter</Text>
-</TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Icon name="megaphone" size={18} color={pallette.primary} />
-              <Text style={styles.actionText}>Create Banner</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Icon name="chart-column" size={18} color={pallette.primary} />
-              <Text style={styles.actionText}>Analytics</Text>
-            </TouchableOpacity>
+            {quickActions.map((action, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.actionBtn} 
+                onPress={action.onPress}
+              >
+                <Icon name={action.icon} size={18} color={action.color} />
+                <Text style={styles.actionText}>{action.title}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -243,71 +320,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: semibold,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  card: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  iconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
-    fontFamily: semibold,
-  },
-  cardTitle: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: regular,
-  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  managementCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  managementValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginVertical: 8,
-    fontFamily: semibold,
-  },
-  managementTitle: {
-    fontSize: 14,
-    color: '#666',
-    fontFamily: regular,
   },
   summaryBox: {
     marginHorizontal: 16,
@@ -332,6 +347,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  summaryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   summaryItem: {
     flex: 1,
     flexDirection: 'row',
@@ -341,7 +361,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f8ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -359,9 +378,33 @@ const styles = StyleSheet.create({
     fontFamily: semibold,
   },
   summaryDivider: {
-    width: 1,
+    height: 1,
     backgroundColor: '#eee',
-    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  managementCard: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  managementValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginVertical: 8,
+    fontFamily: semibold,
+  },
+  managementTitle: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: regular,
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -388,6 +431,12 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     fontFamily: medium,
   },
+  summaryHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 16,
+},
 });
 
 export default AdminDashboard;

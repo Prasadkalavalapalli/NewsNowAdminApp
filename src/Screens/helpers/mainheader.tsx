@@ -15,9 +15,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
+import HelpScreen from '../help screens/help';
 import AccountTabs from '../accounts/account';
 import HomeScreen from '../home screens/home';
-import HelpScreen from '../help screens/help';
 
 const { width: w, height: h } = Dimensions.get('window');
 
@@ -39,53 +39,47 @@ const MainHeader = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Left Section: Logo with Brand Name */}
+        {/* Logo and Brand */}
         <TouchableOpacity 
-          style={styles.leftSection} 
+          style={styles.brandContainer}
           onPress={handleLogoPress}
           activeOpacity={0.7}
         >
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../Asserts/newsfulllogo.png')}
-              style={styles.logo}
-            //   resizeMode="contain"
-            />
-            <View style={styles.brandContainer}>
-              <Text style={styles.brandName}>NewsNow</Text>
-              <Text style={styles.brandTagline}>Stay Informed</Text>
-            </View>
+          <Image
+            source={require('../../Asserts/newsfulllogo.png')}
+            style={styles.logo}
+          />
+          <View style={styles.brandTextContainer}>
+            <Text style={styles.brandName}>NewsNow</Text>
+            <Text style={styles.brandTagline}>Stay Informed • Stay Ahead</Text>
           </View>
         </TouchableOpacity>
 
-        {/* Right Section: Help & Profile Icons */}
-        <View style={styles.rightSection}>
+        {/* Action Icons */}
+        <View style={styles.actionsContainer}>
           <TouchableOpacity
-            style={styles.iconButton}
+            style={styles.actionButton}
             onPress={handleHelpPress}
             activeOpacity={0.6}
           >
-            <View style={styles.iconContainer}>
-              <Icon name="help-outline" size={22} color={pallette.primary} />
-              <Text style={styles.iconLabel}>Help</Text>
+            <View style={[styles.iconWrapper, styles.helpIconWrapper]}>
+              <Icon name="help-outline" size={20} color={pallette.white} />
             </View>
+            <Text style={styles.actionLabel}>Help</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={styles.iconButton}
+            style={styles.actionButton}
             onPress={handleProfilePress}
             activeOpacity={0.6}
           >
-            <View style={styles.iconContainer}>
-              <Icon name="account-circle" size={22} color={pallette.primary} />
-              <Text style={styles.iconLabel}>Profile</Text>
+            <View style={[styles.iconWrapper, styles.profileIconWrapper]}>
+              <Icon name="person-outline" size={20} color={pallette.white} />
             </View>
+            <Text style={styles.actionLabel}>Profile</Text>
           </TouchableOpacity>
         </View>
       </View>
-      
-      {/* Optional: Bottom border with gradient effect */}
-      <View style={styles.bottomBorder} />
     </SafeAreaView>
   );
 };
@@ -94,81 +88,77 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: pallette.white,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    shadowColor: pallette.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: h * 0.05,
+    height: h * 0.08,
     backgroundColor: pallette.white,
-    paddingHorizontal: w * 0.05,
-    borderBottomWidth: 0.5,
-    borderBottomColor:pallette.grey,
-    paddingBottom:5,
-  },
-  leftSection: {
-    flex: 1,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logo: {
-    width: w * 0.2,
-    height: h * 0.05,
-    borderRadius: 8,
-    // shadowColor: pallette.primary,
-    // shadowOffset: { width: 0, height: 2 },
-    // shadowOpacity: 0.1,
-    // // shadowRadius: 4,
-    // elevation: 3,
+    paddingHorizontal: w * 0.04,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  logo: {
+    width: w * 0.1,
+    height: w * 0.1,
+    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  brandTextContainer: {
     marginLeft: 12,
   },
   brandName: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: bold,
     color: pallette.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     fontWeight: '700',
-    textShadowColor: 'rgba(0, 122, 255, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   brandTagline: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: medium,
-    color: pallette.grey || '#666',
+    color: pallette.grey,
     marginTop: 2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
-  rightSection: {
+  actionsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconButton: {
+  actionButton: {
+    alignItems: 'center',
     marginLeft: 16,
   },
-  iconContainer: {
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 122, 255, 0.05)',
-    minWidth: 60,
+    marginBottom: 4,
   },
-  iconLabel: {
+  helpIconWrapper: {
+    backgroundColor: '#4CAF50', // Green
+  },
+  profileIconWrapper: {
+    backgroundColor: '#FF6B6B', // Coral red
+  },
+  actionLabel: {
     fontSize: 10,
     fontFamily: medium,
-    color: pallette.primary,
-    marginTop: 4,
+    color: '#666',
     fontWeight: '500',
-  },
-  bottomBorder: {
-    marginTop:4,
-    height: 2,
-    width: '100%',
-    // backgroundColor: pallette.lightgrey,
   },
 });
 

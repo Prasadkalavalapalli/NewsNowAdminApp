@@ -27,10 +27,10 @@ import UploadScreen from '../Screens/news/UploadScreen';
 
 // Define your strings (create a strings file or define here)
 const strings = {
-  AdminHome: 'Admin Home',
+  AdminHome: 'Home',
   upload: 'Upload',
   NewsStatus: 'News Status',
-  ReporterHome: 'Reporter Home',
+  ReporterHome: 'News',
   home: 'Home',
 };
 
@@ -56,13 +56,14 @@ const AdminHomeStack = () => (
     <Stack.Screen name='ReporterDetailsScreen'component={ReporterDetailsScreen}/>
       <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
        <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
+       
         {/* Add more admin screens here */}
   </Stack.Navigator>
 );
 
 const UploadStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="NewsViewScreen" component={NewsViewScreen} />
+   
       <Stack.Screen name="UploadScreen" component={UploadScreen} />
 
 
@@ -82,8 +83,7 @@ const NewsStatusStack = () => (
 
 const ReporterHomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="ReporterMain" component={ReporterScreen} />
-    {/* Add more reporter screens here */}
+     <Stack.Screen name="NewsViewScreen" component={NewsViewScreen} />
   </Stack.Navigator>
 );
 
@@ -110,6 +110,14 @@ const TabNav = () => {
       show: user?.role === 'reporter' || user?.role === 'admin',
     },
     {
+      name: strings.ReporterHome,
+      component: ReporterHomeStack,
+      title: strings.ReporterHome,
+      activeIcon: 'book-open-page-variant',
+      inactiveIcon: 'book-open-page-variant-outline',
+      show: user?.role === 'reporter'|| user?.role === 'admin',
+    },
+    {
       name: strings.NewsStatus,
       component: NewsStatusStack,
       title: strings.NewsStatus,
@@ -117,14 +125,7 @@ const TabNav = () => {
       inactiveIcon: 'newspaper-variant-outline',
       show: true, // Show for all users
     },
-    {
-      name: strings.ReporterHome,
-      component: ReporterHomeStack,
-      title: strings.ReporterHome,
-      activeIcon: 'account-circle',
-      inactiveIcon: 'account-circle-outline',
-      show: user?.role === 'reporter',
-    },
+    
   ];
 
   // Filter tabs based on user role and visibility

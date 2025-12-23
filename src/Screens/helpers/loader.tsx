@@ -27,10 +27,10 @@ const Loader = () => {
       <View style={styles.loaderContainer}>
         {/* Outer rotating ring - ONLY THIS ROTATES */}
         <Animated.View style={[styles.outerRing, { transform: [{ rotate: spin }] }]}>
-          <View style={styles.ringSegment} />
-          <View style={[styles.ringSegment, styles.segment1]} />
+          {/* <View style={styles.ringSegment} /> */}
+          {/* <View style={[styles.ringSegment, styles.segment1]} />
           <View style={[styles.ringSegment, styles.segment2]} />
-          <View style={[styles.ringSegment, styles.segment3]} />
+          <View style={[styles.ringSegment, styles.segment3]} /> */}
         </Animated.View>
         
         {/* Center logo - STATIC, NO ROTATION */}

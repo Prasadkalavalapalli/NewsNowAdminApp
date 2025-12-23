@@ -17,8 +17,10 @@ import Header from '../helpers/header';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 
-import CustomDropdown from '../helpers/CustomDropdown';
+
 import ToastMessage from '../helpers/ToastMessage';
+import CustomDropdown from '../helpers/DropdownItem';
+import MainHeader from '../helpers/mainheader';
 
 const newsTypeOptions = [
   { label: 'Local News', value: 'Local News' },
@@ -77,7 +79,7 @@ const UploadScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Header title="Upload the News" onBack={() => navigation.goBack()} />
+       <MainHeader/>
 
       <ScrollView contentContainerStyle={styles.container}>
         {/* Media Picker */}
@@ -112,24 +114,7 @@ const UploadScreen = () => {
             resizeMode="contain"
           />
         )}
-
-        {/* News Type Dropdown */}
-        <Text style={styles.label}>News Type</Text>
-        <CustomDropdown
-          items={newsTypeOptions}
-          selectedValue={newsType}
-          onValueChange={setNewsType}
-        />
-
-        {/* Category Dropdown */}
-        <Text style={styles.label}>Category Type</Text>
-        <CustomDropdown
-          items={categoryOptions}
-          selectedValue={categoryType}
-          onValueChange={setCategoryType}
-        />
-
-        {/* Headline */}
+          {/* Headline */}
         <Text style={styles.label}>Headline</Text>
         <TextInput
           style={styles.input}
@@ -146,6 +131,25 @@ const UploadScreen = () => {
           onChangeText={setContent}
         />
 
+
+        {/* News Type Dropdown */}
+        <Text style={styles.label}>News Type</Text>
+       
+        <CustomDropdown
+          items={newsTypeOptions}
+          selectedValue={newsType}
+          onValueChange={setNewsType}
+        />
+
+        {/* Category Dropdown */}
+        <Text style={styles.label}>Category Type</Text>
+        <CustomDropdown
+          items={categoryOptions}
+          selectedValue={categoryType}
+          onValueChange={setCategoryType}
+        />
+
+      
         <Pressable style={styles.submitBtn} onPress={submitNews}>
           <Text style={styles.submitText}>Submit</Text>
         </Pressable>
@@ -168,9 +172,9 @@ export default UploadScreen;
 /* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { padding: 16 },
+  container: { padding: 16,paddingTop:20 },
   label: { fontFamily: medium, marginVertical: 8 },
-
+  
   mediaRow: { flexDirection: 'row', marginBottom: 10 },
   mediaBox: {
     flex: 1,

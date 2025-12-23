@@ -48,12 +48,11 @@ interface AccountTabsProps {
  */
 const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { logout: contextLogout } = useAppContext();
+  const { logout: contextLogout,user } = useAppContext();
   // Get user data from Redux store
-  const { user } = useSelector((state: any) => state.auth);
-  console.log(user)
+ 
   // const { contextState } = useAppContext();
-  const userId  = 1;
+  const userId  =user?.id;
 
   /**
    * Navigation menu items configuration
@@ -155,7 +154,7 @@ const AccountTabs: React.FC<AccountTabsProps> = ({ navigation }) => {
     }
 
     const username = user.username || user.name || "Guest User";
-    const mobileNumber = user.mobileNumber || user.phone || "";
+    const mobileNumber = user.mobileNumber || user.phone || user.email||'';
 
     return { username, mobileNumber };
   };
