@@ -1,5 +1,5 @@
 // screens/PendingNewsScreen.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
@@ -86,10 +86,17 @@ const { user } = useAppContext();
 };
   
   // Initial load and when date filter changes
-  useEffect(() => {
-    fetchPendingNews();
-  }, [dateFilter]);
+ useFocusEffect(
+    useCallback(() => {
+      
+      fetchPendingNews();
 
+      // Optional cleanup
+      return () => {
+        console.log('Screen lost focus');
+      };
+    }, [dateFilter]) // Re-run when dateFilter changes
+  );
   // Handle refresh
   const handleRefresh = () => {
     setRefreshing(true);

@@ -36,7 +36,7 @@ const ReporterList = () => {
     pending: 0,
     suspended: 0,
   });
-
+console.log(reporters)
   // Filter options
   const filterOptions = [
     { id: 'all', label: 'All', icon: 'users' },
@@ -53,13 +53,23 @@ const ReporterList = () => {
       if (response.error===false) {
         const reportersData = response.data|| [];
         setReporters(reportersData);
-        // Calculate stats
-        const newStats = {
-          all: reportersData.length,
-          active: reportersData.filter(r => r.enabled === 'active').length,
-          pending: reportersData.filter(r => r.status === 'pending').length,
-          suspended: reportersData.filter(r => r.enabled === 'suspended').length,
-        };
+          // Add status to each reporter
+  const reportersWithStatus = reportersData.map(reporter => ({
+    ...reporter,
+    status: reporter ? 
+            (reporter.enabled === true ? 'active' : 'suspended') : 
+            'pending'
+  }));
+  
+  setReporters(reportersWithStatus);
+  
+  // Calculate stats based on status
+  const newStats = {
+    all: reportersWithStatus.length,
+    active: reportersWithStatus.filter(r => r.status === 'active').length,
+    pending: reportersWithStatus.filter(r => r.status === 'pending').length,
+    suspended: reportersWithStatus.filter(r => r.status === 'suspended').length,
+  };
         setStats(newStats);
       }
     } catch (err) {
@@ -158,7 +168,7 @@ const ReporterList = () => {
       <View style={styles.contactInfo}>
         <View style={styles.contactItem}>
           <Icon name="phone" size={12} color={pallette.grey} />
-          <Text style={styles.contactText}>{item.phone || 'No phone'}</Text>
+          <Text style={styles.contactText}>{item.mobileNumber || 'No phone'}</Text>
         </View>
         <View style={styles.contactItem}>
           <Icon name="location-dot" size={12} color={pallette.grey} />
@@ -227,7 +237,7 @@ const ReporterList = () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.filterContainer}
+          // style={styles.filterContainer}
           contentContainerStyle={styles.filterContentContainer}
         >
           {filterOptions.map((filter) => (

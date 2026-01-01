@@ -22,6 +22,8 @@ import LoginScreen from '../Screens/login screens/login-screen';
 import EditPendingNews from '../Screens/news/EditPendingNews';
 import UploadScreen from '../Screens/news/UploadScreen';
 import ProfileScreen from '../Screens/accounts/profile-screen';
+import VerifiedNewsScreen from '../Screens/news/verifiednews';
+import RejectedNewsScreen from '../Screens/news/rejectednews';
 
 
 
@@ -87,6 +89,9 @@ const NewsStatusStack = () => (
     <Stack.Screen name="NewsStatusMain" component={NewsDashboard} />
     <Stack.Screen name="NewsDetails" component={NewsDetails} />
      <Stack.Screen name="EditPendingNews" component={EditPendingNews} />
+     <Stack.Screen name="VerifiedNewsScreen" component={VerifiedNewsScreen}/>
+     <Stack.Screen name="RejectedNewsScreen" component={RejectedNewsScreen} />
+
     {/* Add more news status screens here */}
    
   </Stack.Navigator>

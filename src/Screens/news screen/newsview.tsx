@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,18 +13,276 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  Share,
+  Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { pallette } from '../helpers/colors';
 import { regular, medium, semibold, bold } from '../helpers/fonts';
 import Loader from '../helpers/loader';
+import apiService from '../../Axios/Api';
+import { useAppContext } from '../../Store/contexts/app-context';
+import ErrorMessage from '../helpers/errormessage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Filter options
+const CATEGORIES = [
+  'BUSINESS', 'POLITICS', 'TECHNOLOGY', 'SPORTS', 'ENTERTAINMENT', 
+  'HEALTH', 'SCIENCE', 'ENVIRONMENT', 'EDUCATION'
+];
+
+const NEWS_TYPES = ['LOCAL', 'NATIONAL', 'INTERNATIONAL'];
+const PRIORITIES = ['BREAKING', 'FLASH', 'NORMAL'];
+
+// Comments Panel Component (moved outside to prevent re-renders)
+const CommentsPanel = React.memo(({ 
+  showComments, 
+  toggleComments, 
+  currentNewsId, 
+  comments, 
+  counts, 
+  newComment, 
+  setNewComment, 
+  submitComment 
+}) => {
+  const commentInputRef = useRef(null);
+
+  if (!showComments || !comments[currentNewsId]) return null;
+
+  return (
+    <View style={styles.commentsContainer}>
+      <View style={styles.commentsHeader}>
+        <Text style={styles.commentsTitle}>
+          Comments ({counts[currentNewsId]?.comments || 0})
+        </Text>
+        <TouchableOpacity onPress={toggleComments}>
+          <Icon name="xmark" size={20} color={pallette.grey} />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.addCommentContainer}>
+        <TextInput
+          ref={commentInputRef}
+          style={styles.commentInput}
+          placeholder="Write a comment..."
+          value={newComment}
+          onChangeText={setNewComment}
+          keyboardType="default"
+          multiline={true}
+          placeholderTextColor={pallette.grey}
+          blurOnSubmit={false}
+          onSubmitEditing={submitComment}
+        />
+        <TouchableOpacity 
+          style={[styles.submitButton, !newComment.trim() && styles.submitButtonDisabled]}
+          onPress={submitComment}
+          disabled={!newComment.trim()}
+        >
+          <Icon name="paper-plane" size={18} color={pallette.white} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView 
+        style={styles.commentsList}
+        keyboardShouldPersistTaps="handled"
+      >
+        {comments[currentNewsId].map((item) => (
+          <View key={item.id} style={styles.commentItem}>
+            <View style={styles.commentAvatar}>
+              <Text style={styles.commentAvatarText}>
+                {item.user.charAt(0)}
+              </Text>
+            </View>
+            <View style={styles.commentContent}>
+              <View style={styles.commentHeader}>
+                <Text style={styles.commentUserName}>{item.user}</Text>
+                <Text style={styles.commentTime}>{item.time}</Text>
+              </View>
+              <Text style={styles.commentText}>{item.text}</Text>
+            </View>
+          </View>
+        ))}
+        
+        {comments[currentNewsId].length === 0 && (
+          <View style={styles.noCommentsContainer}>
+            <Icon name="comment-slash" size={40} color={pallette.grey} />
+            <Text style={styles.noCommentsText}>No comments yet</Text>
+          </View>
+        )}
+      </ScrollView>
+      
+      
+    </View>
+  );
+});
+
+// Filter Modal Component (moved outside to prevent re-renders)
+const FilterModal = React.memo(({ 
+  showFilterModal, 
+  setShowFilterModal, 
+  selectedCategory, 
+  setSelectedCategory, 
+  selectedNewsType, 
+  setSelectedNewsType, 
+  selectedPriority, 
+  setSelectedPriority, 
+  clearFilters, 
+  applyFilters 
+}) => {
+  const modalContentRef = useRef(null);
+
+  const handleOverlayPress = (event) => {
+    // Check if the press was on the overlay (not the modal content)
+    if (modalContentRef.current && 
+        !modalContentRef.current.measure) {
+      return;
+    }
+    
+    modalContentRef.current.measure((fx, fy, width, height, px, py) => {
+      if (event.nativeEvent.pageY < py) {
+        setShowFilterModal(false);
+      }
+    });
+  };
+
+  return (
+    <Modal
+      visible={showFilterModal}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setShowFilterModal(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={handleOverlayPress}
+      >
+        <View 
+          ref={modalContentRef}
+          style={styles.modalContent}
+          onStartShouldSetResponder={() => true}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filter News</Text>
+            <TouchableOpacity 
+              onPress={() => setShowFilterModal(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="xmark" size={20} color={pallette.black} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filterOptions}>
+            {/* Category Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Category</Text>
+              <View style={styles.filterButtons}>
+                {CATEGORIES.map(category => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.filterButton,
+                      selectedCategory === category && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedCategory(
+                      selectedCategory === category ? '' : category
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedCategory === category && styles.filterButtonTextActive
+                    ]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* News Type Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>News Type</Text>
+              <View style={styles.filterButtons}>
+                {NEWS_TYPES.map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[
+                      styles.filterButton,
+                      selectedNewsType === type && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedNewsType(
+                      selectedNewsType === type ? '' : type
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedNewsType === type && styles.filterButtonTextActive
+                    ]}>
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Priority Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterLabel}>Priority</Text>
+              <View style={styles.filterButtons}>
+                {PRIORITIES.map(priority => (
+                  <TouchableOpacity
+                    key={priority}
+                    style={[
+                      styles.filterButton,
+                      selectedPriority === priority && styles.filterButtonActive
+                    ]}
+                    onPress={() => setSelectedPriority(
+                      selectedPriority === priority ? '' : priority
+                    )}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      selectedPriority === priority && styles.filterButtonTextActive
+                    ]}>
+                      {priority}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.clearButton]}
+              onPress={clearFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearButtonText}>Clear All</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.applyButton]}
+              onPress={applyFilters}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
 
 const NewsViewScreen = () => {
   // Refs
   const flatListRef = useRef(null);
-  const commentInputRef = useRef(null);
   
   // State
   const [loading, setLoading] = useState(true);
@@ -35,191 +293,194 @@ const NewsViewScreen = () => {
   const [comments, setComments] = useState({});
   const [likes, setLikes] = useState({});
   const [saved, setSaved] = useState({});
-  const [shares, setShares] = useState({});
+  const [counts, setCounts] = useState({});
+  
+  // Filter state
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedNewsType, setSelectedNewsType] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState('');
+  const [filterApplied, setFilterApplied] = useState(false);
+  
+  const { user } = useAppContext();
+  const userId = user?.userId || 2;
 
   // Initial data load
   useEffect(() => {
-    initializeData();
+    loadPublishedNews();
   }, []);
 
-  const initializeData = async () => {
+  // Load data when current news changes
+  useEffect(() => {
+    if (currentNewsId) {
+      loadNewsData(currentNewsId);
+    }
+  }, [currentNewsId]);
+
+  // Load published news with optional filters
+  const loadPublishedNews = async (filters = {}) => {
     try {
-      // In production, replace with API call
-      const mockNews = generateMockNews();
-      setNewsList(mockNews);
+      setLoading(true);
+      const response = await apiService.getPublishedNews(filters);
       
-      // Initialize states for each news item
-      initializeNewsStates(mockNews);
+      if (response.error === false) {
+        setNewsList(response.data || []);
+        initializeNewsStates(response.data || []);
+        
+        // Load data for first news if available
+        if (response.data?.length > 0) {
+          await loadNewsData(response.data[0].id);
+        }
+      }
     } catch (error) {
-      console.error('Error initializing data:', error);
+      ErrorMessage.show('Failed to load news');
     } finally {
       setLoading(false);
     }
   };
 
- const generateMockNews = () => {
-  return [
-    {
-      id: 1,
-      headline: 'AI Breakthrough Revolutionizes Healthcare',
-      description: 'New artificial intelligence system can detect diseases with 99% accuracy.',
-      image: 'https://picsum.photos/400/300?random=1',
-      category: 'Technology',
-      time: 'Just now',
-      content: 'Researchers have developed an AI system that can analyze medical scans and detect early signs of cancer, heart disease, and neurological disorders with unprecedented accuracy. This breakthrough could save millions of lives through early detection.',
-      initialLikes: 423,
-      initialComments: 67,
-      initialShares: 89,
-    },
-    {
-      id: 2,
-      headline: 'Global Summit Addresses Climate Crisis',
-      description: 'World leaders unite to announce new climate action commitments.',
-      image: 'https://picsum.photos/400/300?random=2',
-      category: 'Environment',
-      time: '30 minutes ago',
-      content: 'At the annual climate summit, 150 nations pledged to cut carbon emissions by 50% before 2030. The agreement includes major investments in renewable energy and a global carbon trading system.',
-      initialLikes: 587,
-      initialComments: 142,
-      initialShares: 234,
-    },
-    {
-      id: 3,
-      headline: 'Tech Giant Unveils Revolutionary Smartphone',
-      description: 'New device features holographic display and week-long battery life.',
-      image: 'https://picsum.photos/400/300?random=3',
-      category: 'Technology',
-      time: '1 hour ago',
-      content: 'The latest smartphone innovation includes a holographic display that projects 3D images, revolutionary battery technology that lasts 7 days on a single charge, and advanced AI capabilities that learn user patterns.',
-      initialLikes: 321,
-      initialComments: 89,
-      initialShares: 156,
-    },
-    {
-      id: 4,
-      headline: 'Historic Peace Treaty Signed',
-      description: 'After decades of conflict, nations reach landmark peace agreement.',
-      image: 'https://picsum.photos/400/300?random=4',
-      category: 'Politics',
-      time: '2 hours ago',
-      content: 'In a historic ceremony, leaders of two long-feuding nations signed a comprehensive peace treaty ending 40 years of conflict. The agreement includes economic cooperation, cultural exchanges, and joint security measures.',
-      initialLikes: 892,
-      initialComments: 245,
-      initialShares: 567,
-    },
-    {
-      id: 5,
-      headline: 'Breakthrough in Renewable Energy Storage',
-      description: 'Scientists develop battery that stores solar energy for months.',
-      image: 'https://picsum.photos/400/300?random=5',
-      category: 'Science',
-      time: '3 hours ago',
-      content: 'Researchers have created a revolutionary energy storage system that can hold solar energy for up to 6 months with minimal loss. This breakthrough solves the biggest challenge in renewable energy adoption.',
-      initialLikes: 456,
-      initialComments: 78,
-      initialShares: 189,
-    },
-    {
-      id: 6,
-      headline: 'Olympic Games Break Viewership Records',
-      description: 'Global audience reaches 5 billion viewers for opening ceremony.',
-      image: 'https://picsum.photos/400/300?random=6',
-      category: 'Sports',
-      time: '4 hours ago',
-      content: 'The Olympic Games shattered viewership records with 5 billion people tuning in worldwide. Historic performances, stunning venues, and unity celebrations made this edition particularly memorable.',
-      initialLikes: 678,
-      initialComments: 156,
-      initialShares: 345,
-    },
-    {
-      id: 7,
-      headline: 'Major Breakthrough in Cancer Treatment',
-      description: 'New therapy shows 95% success rate in clinical trials.',
-      image: 'https://picsum.photos/400/300?random=7',
-      category: 'Health',
-      time: '5 hours ago',
-      content: 'A revolutionary cancer treatment using targeted immunotherapy has shown remarkable results in phase 3 clinical trials, achieving 95% remission rates in patients with advanced stages of the disease.',
-      initialLikes: 1245,
-      initialComments: 289,
-      initialShares: 678,
-    },
-    {
-      id: 8,
-      headline: 'Cryptocurrency Market Hits $5 Trillion',
-      description: 'Digital assets reach new milestone as institutional adoption grows.',
-      image: 'https://picsum.photos/400/300?random=8',
-      category: 'Finance',
-      time: '6 hours ago',
-      content: 'The total cryptocurrency market capitalization has surpassed $5 trillion for the first time, driven by increased institutional investment and widespread adoption by major corporations.',
-      initialLikes: 345,
-      initialComments: 89,
-      initialShares: 123,
-    },
-    {
-      id: 9,
-      headline: 'Ancient City Discovered in Amazon',
-      description: 'Archaeologists uncover lost civilization dating back 3000 years.',
-      image: 'https://picsum.photos/400/300?random=9',
-      category: 'History',
-      time: '7 hours ago',
-      content: 'Using advanced satellite imaging and LiDAR technology, archaeologists have discovered a massive ancient city complex in the Amazon rainforest, complete with pyramids, roads, and irrigation systems.',
-      initialLikes: 567,
-      initialComments: 134,
-      initialShares: 256,
-    },
-    {
-      id: 10,
-      headline: 'Electric Vehicle Sales Surge 300%',
-      description: 'Global EV adoption accelerates faster than expected.',
-      image: 'https://picsum.photos/400/300?random=10',
-      category: 'Automotive',
-      time: '8 hours ago',
-      content: 'Electric vehicle sales have increased by 300% year-over-year as charging infrastructure expands and prices become more competitive. This rapid adoption signals a major shift in the automotive industry.',
-      initialLikes: 432,
-      initialComments: 98,
-      initialShares: 187,
-    }
-  ];
-};
   const initializeNewsStates = (newsData) => {
     const initialComments = {};
     const initialLikes = {};
     const initialSaved = {};
-    const initialShares = {};
+    const initialCounts = {};
     
     newsData.forEach(news => {
-      initialComments[news.id] = [
-        { id: 1, user: 'John Doe', text: 'Great news! Looking forward to this.', time: '1 hour ago' },
-        { id: 2, user: 'Sarah Smith', text: 'Finally some positive development!', time: '2 hours ago' },
-      ];
-      initialLikes[news.id] = { count: news.initialLikes, liked: false };
+      initialComments[news.id] = [];
+      initialLikes[news.id] = { liked: false };
       initialSaved[news.id] = false;
-      initialShares[news.id] = { count: news.initialShares };
+      initialCounts[news.id] = {
+        likes: 0,
+        comments: 0,
+        shares: 0
+      };
     });
     
     setComments(initialComments);
     setLikes(initialLikes);
     setSaved(initialSaved);
-    setShares(initialShares);
+    setCounts(initialCounts);
+  };
+
+  // Load all data for a specific news item
+  const loadNewsData = async (newsId) => {
+    try {
+      await Promise.all([
+        loadLikeStatus(newsId),
+        loadComments(newsId),
+        loadCounts(newsId)
+      ]);
+    } catch (error) {
+      console.error(`Error loading data for news ${newsId}:`, error);
+    }
+  };
+
+  // Load like status
+  const loadLikeStatus = async (newsId) => {
+    try {
+      const response = await apiService.checkLikeStatus(newsId, userId);
+      if (response.error === false) {
+        const liked = response.data?.[0]?.liked || false;
+        setLikes(prev => ({
+          ...prev,
+          [newsId]: { liked }
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading like status:`, error);
+    }
+  };
+
+  // Load comments
+  const loadComments = async (newsId) => {
+    try {
+      const response = await apiService.getComments(newsId);
+      
+      if (Array.isArray(response.data)) {
+        const formattedComments = response.data.map(comment => ({
+          id: comment.id,
+          userId: comment.userId,
+          user: `${comment.userName}`,
+          text: comment.comment,
+          time: formatTime(comment.createdAt),
+          createdAt: comment.createdAt
+        }));
+        
+        setComments(prev => ({
+          ...prev,
+          [newsId]: formattedComments
+        }));
+        
+        setCounts(prev => ({
+          ...prev,
+          [newsId]: {
+            ...prev[newsId],
+            comments: formattedComments.length
+          }
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading comments:`, error);
+      setComments(prev => ({
+        ...prev,
+        [newsId]: []
+      }));
+    }
+  };
+
+  // Load counts
+  const loadCounts = async (newsId) => {
+    try {
+      const response = await apiService.getCounts(newsId);
+      if (response.data) {
+        setCounts(prev => ({
+          ...prev,
+          [newsId]: {
+            likes: response.data.likes || 0,
+            comments: response.data.comments || 0,
+            shares: response.data.shares || 0
+          }
+        }));
+      }
+    } catch (error) {
+      console.error(`Error loading counts:`, error);
+    }
+  };
+
+  // Format time
+  const formatTime = (timestamp) => {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      
+      return date.toLocaleDateString();
+    } catch (error) {
+      return 'Recently';
+    }
   };
 
   // Current news data
   const currentNews = newsList[currentIndex] || {};
   const currentNewsId = currentNews.id;
 
-  // Navigation handlers
-  const handleBackPress = () => {
-    // navigation.goBack(); // Uncomment when navigation is available
-  };
-
-  const handleSwipe = (event) => {
+  // Handle swipe - useCallback to prevent unnecessary re-renders
+  const handleSwipe = useCallback((event) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const index = Math.round(contentOffsetX / SCREEN_WIDTH);
     setCurrentIndex(index);
     setShowComments(false);
-  };
+  }, []);
 
-  const goToNews = (index) => {
+  const goToNews = useCallback((index) => {
     if (index >= 0 && index < newsList.length) {
       flatListRef.current?.scrollToIndex({
         index,
@@ -228,138 +489,159 @@ const NewsViewScreen = () => {
       setCurrentIndex(index);
       setShowComments(false);
     }
-  };
+  }, [newsList.length]);
 
-  const goToNextNews = () => goToNews(currentIndex + 1);
-  const goToPrevNews = () => goToNews(currentIndex - 1);
+  // Filter functions
+  const handleFilterPress = useCallback(() => {
+    setShowFilterModal(true);
+  }, []);
 
-  // Interaction handlers
-  const toggleLike = () => {
+  const applyFilters = useCallback(async () => {
+    try {
+      const filters = {};
+      if (selectedCategory) filters.category = selectedCategory;
+      if (selectedNewsType) filters.newsType = selectedNewsType;
+      if (selectedPriority) filters.priority = selectedPriority;
+      
+      await loadPublishedNews(filters);
+      setFilterApplied(true);
+      setShowFilterModal(false);
+      setCurrentIndex(0);
+    } catch (error) {
+      ErrorMessage.show('Failed to apply filters');
+    }
+  }, [selectedCategory, selectedNewsType, selectedPriority]);
+
+  const clearFilters = useCallback(async () => {
+    setSelectedCategory('');
+    setSelectedNewsType('');
+    setSelectedPriority('');
+    setFilterApplied(false);
+    await loadPublishedNews();
+    setShowFilterModal(false);
+  }, []);
+
+  // Toggle like
+  const toggleLike = useCallback(async () => {
     if (!currentNewsId) return;
     
-    setLikes(prev => ({
-      ...prev,
-      [currentNewsId]: {
-        count: prev[currentNewsId].liked ? prev[currentNewsId].count - 1 : prev[currentNewsId].count + 1,
-        liked: !prev[currentNewsId].liked
-      }
-    }));
-  };
+    try {
+      const currentLiked = likes[currentNewsId]?.liked || false;
+      
+      // Optimistic update
+      setLikes(prev => ({
+        ...prev,
+        [currentNewsId]: { liked: !currentLiked }
+      }));
+      
+      setCounts(prev => ({
+        ...prev,
+        [currentNewsId]: {
+          ...prev[currentNewsId],
+          likes: currentLiked 
+            ? Math.max(0, (prev[currentNewsId]?.likes || 0) - 1)
+            : (prev[currentNewsId]?.likes || 0) + 1
+        }
+      }));
 
-  const toggleSave = () => {
+      await apiService.toggleLike(currentNewsId, userId);
+    } catch (error) {
+      // Revert on error
+      const currentLiked = likes[currentNewsId]?.liked || false;
+      setLikes(prev => ({
+        ...prev,
+        [currentNewsId]: { liked: currentLiked }
+      }));
+      ErrorMessage.show('Failed to update like');
+    }
+  }, [currentNewsId, likes, userId]);
+
+  // Toggle save
+  const toggleSave = useCallback(() => {
     if (!currentNewsId) return;
-    
     setSaved(prev => ({
       ...prev,
       [currentNewsId]: !prev[currentNewsId]
     }));
-  };
+  }, [currentNewsId]);
 
-  const incrementShare = () => {
-    if (!currentNewsId) return;
-    
-    setShares(prev => ({
+  // Share news with formatted template
+const incrementShare = useCallback(async () => {
+  if (!currentNewsId) return;
+  
+  try {
+    setCounts(prev => ({
       ...prev,
       [currentNewsId]: {
-        count: prev[currentNewsId].count + 1
+        ...prev[currentNewsId],
+        shares: (prev[currentNewsId]?.shares || 0) + 1
       }
     }));
-    // TODO: Implement native share dialog
-  };
 
-  const toggleComments = () => {
-    setShowComments(!showComments);
-  };
+    await apiService.shareNews(currentNewsId, userId);
+    
+    // Create formatted news template
+    const shareTemplate = `
+📰 *${currentNews.headline}* 
 
-  const submitComment = () => {
+${currentNews.content.length > 300 ? currentNews.content.substring(0, 300) + '...' : currentNews.content}
+
+ *Category:* ${currentNews.category}
+ *Type:* ${currentNews.newsType}
+ *Priority:* ${currentNews.priority}
+*Published:* ${formatTime(currentNews.publishedAt)}
+
+📲 *Shared via NewsApp*
+👉 Read full story in the app for more details!
+
+#${currentNews.category} #NewsApp
+    `.trim();
+
+    try {
+      await Share.share({
+        title: currentNews.headline,
+        message: shareTemplate,
+        url: currentNews.mediaUrl || 'https://your-app-link.com' // Add your app link if available
+      });
+    } catch (shareError) {
+      console.log('Share dialog cancelled');
+    }
+  } catch (error) {
+    ErrorMessage.show('Failed to share news');
+  }
+}, [currentNewsId, currentNews, userId]);
+
+  const toggleComments = useCallback(() => {
+    setShowComments(prev => !prev);
+  }, []);
+
+  // Submit comment - useCallback to prevent re-renders
+  const submitComment = useCallback(async () => {
     if (!currentNewsId || newComment.trim() === '') return;
     
-    const newCommentObj = {
-      id: Date.now(),
-      user: 'You',
-      text: newComment.trim(),
-      time: 'Just now'
-    };
+    const commentText = newComment.trim();
     
-    setComments(prev => ({
-      ...prev,
-      [currentNewsId]: [newCommentObj, ...prev[currentNewsId]]
-    }));
-    
-    setNewComment('');
-    commentInputRef.current?.blur();
-  };
+    try {
+      // Clear input first
+      setNewComment('');
+      
+      await apiService.addComment(currentNewsId, userId, { comment: commentText });
+      
+      // Refresh comments
+      await loadComments(currentNewsId);
+      
+      ErrorMessage.show('Comment added successfully');
+    } catch (error) {
+      ErrorMessage.show('Failed to add comment');
+      // Restore comment if failed
+      setNewComment(commentText);
+    }
+  }, [currentNewsId, newComment, userId]);
 
-  // Component: Comments Panel
-  const CommentsPanel = () => {
-    if (!showComments || !comments[currentNewsId]) return null;
-
-    return (
-      <View style={styles.commentsContainer}>
-        <View style={styles.commentsHeader}>
-          <Text style={styles.commentsTitle}>
-            Comments ({comments[currentNewsId].length})
-          </Text>
-          <TouchableOpacity onPress={toggleComments}>
-            <Icon name="xmark" size={20} color={pallette.grey} />
-          </TouchableOpacity>
-        </View>
-        
-       {/* Comments List */}
-<ScrollView 
-  style={styles.commentsList}
-  showsVerticalScrollIndicator={false}
->
-  {comments[currentNewsId].map((item) => (
-    <View key={item.id.toString()} style={styles.commentItem}>
-      <View style={styles.commentUser}>
-        <View style={styles.commentAvatar}>
-          <Text style={styles.commentAvatarText}>
-            {item.user.charAt(0)}
-          </Text>
-        </View>
-        <View style={styles.commentContent}>
-          <View style={styles.commentHeader}>
-            <Text style={styles.commentUserName}>{item.user}</Text>
-            <Text style={styles.commentTime}>{item.time}</Text>
-          </View>
-          <Text style={styles.commentText}>{item.text}</Text>
-        </View>
-      </View>
-    </View>
-  ))}
-</ScrollView>
-        
-        <View style={styles.addCommentContainer}>
-          <TextInput
-            ref={commentInputRef}
-            style={styles.commentInput}
-            placeholder="Write a comment..."
-            value={newComment}
-            onChangeText={setNewComment}
-            multiline
-            placeholderTextColor={pallette.grey}
-            maxLength={500}
-          />
-          <TouchableOpacity 
-            style={[styles.submitButton, !newComment.trim() && styles.submitButtonDisabled]}
-            onPress={submitComment}
-            disabled={!newComment.trim()}
-          >
-            <Icon name="paper-plane" size={18} color={pallette.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
-
-  // Component: Action Bar
-  const ActionBar = ({ newsId }) => (
+  // Action Bar Component - memoized to prevent re-renders
+  const ActionBar = React.memo(({ newsId }) => (
     <View style={styles.actionBar}>
-      <TouchableOpacity 
-        style={styles.actionButton} 
-        onPress={toggleLike}
-      >
+      <TouchableOpacity style={styles.actionButton} onPress={toggleLike}>
         <Icon 
           name="heart" 
           size={22} 
@@ -370,41 +652,29 @@ const NewsViewScreen = () => {
           styles.actionCount,
           likes[newsId]?.liked && styles.likedText
         ]}>
-          {likes[newsId]?.count || 0}
+          {counts[newsId]?.likes || 0}
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.actionButton} 
-        onPress={toggleComments}
-      >
+      <TouchableOpacity style={styles.actionButton} onPress={toggleComments}>
         <Icon 
           name="comment" 
           size={22} 
           color={showComments && currentNewsId === newsId ? pallette.primary : pallette.darkgrey} 
         />
-        <Text style={[
-          styles.actionCount,
-          showComments && currentNewsId === newsId && styles.activeText
-        ]}>
-          {comments[newsId]?.length || 0}
+        <Text style={styles.actionCount}>
+          {counts[newsId]?.comments || 0}
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.actionButton} 
-        onPress={incrementShare}
-      >
+      <TouchableOpacity style={styles.actionButton} onPress={incrementShare}>
         <Icon name="share" size={22} color={pallette.darkgrey} />
         <Text style={styles.actionCount}>
-          {shares[newsId]?.count || 0}
+          {counts[newsId]?.shares || 0}
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.actionButton} 
-        onPress={toggleSave}
-      >
+      <TouchableOpacity style={styles.actionButton} onPress={toggleSave}>
         <Icon 
           name="bookmark" 
           size={22} 
@@ -414,62 +684,65 @@ const NewsViewScreen = () => {
         <Text style={styles.actionText}>Save</Text>
       </TouchableOpacity>
     </View>
-  );
+  ));
 
-  // Component: News Item
-  const NewsItem = ({ item }) => (
+  // News Item Component - memoized to prevent re-renders
+  const NewsItem = React.memo(({ item }) => (
     <View style={styles.newsContainer}>
-      {/* Header with Image */}
       <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image }} style={styles.newsImage} />
+        <Image source={{ uri: item.mediaUrl || 'https://picsum.photos/400/300' }} style={styles.newsImage} />
         <View style={styles.imageOverlay} />
         
-        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-          <Icon name="arrow-left" size={24} color={pallette.white} />
-        </TouchableOpacity>
+       {/* <TouchableOpacity style={styles.filterButton} onPress={handleFilterPress}>
+          <Icon name="filter" size={24} color={pallette.white} />
+          {filterApplied && <View style={styles.filterBadge} />}
+        </TouchableOpacity> */}
+          <TouchableOpacity 
+        style={{
+          position: 'absolute',
+          top: 40,
+          left: 20,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: pallette.primary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        }} 
+        onPress={() => {
+          console.log('BUTTON CLICKED');
+          handleFilterPress();
+        }}
+      >
+        <Icon name="filter" size={20} color={pallette.white} />
+      </TouchableOpacity>
 
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>{item.category}</Text>
+        </View>
         <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{item.category}</Text>
         </View>
       </View>
 
-      {/* Content */}
-      <ScrollView 
-        style={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.contentContainer}>
         <Text style={styles.headline}>{item.headline}</Text>
-        <Text style={styles.time}>{item.time}</Text>
-        <Text style={styles.description}>{item.description}</Text>
-        <Text style={styles.fullContent}>{item.content}</Text>
-        <View style={styles.contentSpacer} />
-      </ScrollView>
-
+        <View style={styles.infoRow}>
+          <Text style={styles.time}>{formatTime(item.publishedAt)}</Text>
+          <Text style={styles.newsType}>{item.newsType} • {item.priority}</Text>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <Text style={styles.fullContent}>{item.content}</Text>
+          <View style={styles.contentSpacer} />
+        </ScrollView>
+      </View>
       <ActionBar newsId={item.id} />
     </View>
-  );
+  ));
 
-  // Component: Navigation Dots
-  const NavigationDots = () => (
-    <View style={styles.dotsContainer}>
-      {newsList.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            index === currentIndex && styles.activeDot,
-          ]}
-        />
-      ))}
-    </View>
-  );
+  if (loading) return <Loader />;
 
-  // Loading state
-  if (loading) {
-    return <Loader />;
-  }
-
-  // Empty state
   if (newsList.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
@@ -477,7 +750,26 @@ const NewsViewScreen = () => {
         <View style={styles.emptyContainer}>
           <Icon name="newspaper" size={60} color={pallette.grey} />
           <Text style={styles.emptyText}>No news available</Text>
+          <TouchableOpacity 
+            style={styles.filterButtonEmpty} 
+            onPress={handleFilterPress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.filterButtonEmptyText}>Try different filters</Text>
+          </TouchableOpacity>
         </View>
+        <FilterModal 
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedNewsType={selectedNewsType}
+          setSelectedNewsType={setSelectedNewsType}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          clearFilters={clearFilters}
+          applyFilters={applyFilters}
+        />
       </SafeAreaView>
     );
   }
@@ -486,16 +778,15 @@ const NewsViewScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <KeyboardAvoidingView 
+      {/* <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        {/* News Carousel */}
+      > */}
         <FlatList
           ref={flatListRef}
           data={newsList}
-          renderItem={NewsItem}
+          renderItem={({ item }) => <NewsItem item={item} />}
           keyExtractor={(item) => item.id.toString()}
           horizontal
           pagingEnabled
@@ -507,30 +798,35 @@ const NewsViewScreen = () => {
             offset: SCREEN_WIDTH * index,
             index,
           })}
-          onScrollToIndexFailed={() => {
-            setTimeout(() => {
-              flatListRef.current?.scrollToIndex({
-                index: currentIndex,
-                animated: true,
-              });
-            }, 100);
-          }}
+          removeClippedSubviews={false}
+          windowSize={5}
+          maxToRenderPerBatch={3}
         />
 
-        {/* Navigation Indicators */}
-        <NavigationDots />
+        <CommentsPanel 
+          showComments={showComments}
+          toggleComments={toggleComments}
+          currentNewsId={currentNewsId}
+          comments={comments}
+          counts={counts}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          submitComment={submitComment}
+        />
         
-        {/* Swipe Hint */}
-        {!showComments && (
-          <View style={styles.swipeHint}>
-            <Icon name="arrows-left-right" size={16} color={pallette.white} />
-            <Text style={styles.swipeHintText}>Swipe for more news</Text>
-          </View>
-        )}
-
-        {/* Comments Panel */}
-        <CommentsPanel />
-      </KeyboardAvoidingView>
+        <FilterModal 
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedNewsType={selectedNewsType}
+          setSelectedNewsType={setSelectedNewsType}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          clearFilters={clearFilters}
+          applyFilters={applyFilters}
+        />
+      {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );
 };
@@ -548,14 +844,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: pallette.black,
-    paddingHorizontal: 20,
+    padding: 20,
   },
   emptyText: {
     fontSize: 18,
     fontFamily: medium,
     color: pallette.white,
     marginTop: 12,
-    textAlign: 'center',
+  },
+  filterButtonEmpty: {
+    marginTop: 20,
+    backgroundColor: pallette.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  filterButtonEmptyText: {
+    color: pallette.white,
+    fontFamily: medium,
   },
   newsContainer: {
     width: SCREEN_WIDTH,
@@ -571,19 +877,17 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  backButton: {
+  
+  filterBadge: {
     position: 'absolute',
-    top: 40,
-    left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
+    top: 5,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: pallette.red,
   },
   categoryBadge: {
     position: 'absolute',
@@ -593,7 +897,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    zIndex: 1,
   },
   categoryText: {
     color: pallette.white,
@@ -610,24 +913,27 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   headline: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: bold,
     color: pallette.black,
     marginBottom: 8,
     lineHeight: 32,
   },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   time: {
     fontSize: 14,
     fontFamily: medium,
     color: pallette.grey,
-    marginBottom: 6,
   },
-  description: {
-    fontSize: 16,
+  newsType: {
+    fontSize: 14,
     fontFamily: medium,
-    color: pallette.black,
-    lineHeight: 24,
-    marginBottom: 16,
+    color: pallette.primary,
   },
   fullContent: {
     fontSize: 15,
@@ -638,7 +944,6 @@ const styles = StyleSheet.create({
   contentSpacer: {
     height: 80,
   },
-  // Action Bar
   actionBar: {
     position: 'absolute',
     bottom: 0,
@@ -649,18 +954,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: pallette.white,
     paddingVertical: 12,
-    paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: pallette.lightgrey,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
   },
   actionButton: {
     alignItems: 'center',
-    justifyContent: 'center',
     minWidth: 60,
     paddingVertical: 4,
   },
@@ -679,9 +977,6 @@ const styles = StyleSheet.create({
   likedText: {
     color: pallette.red,
   },
-  activeText: {
-    color: pallette.primary,
-  },
   // Comments
   commentsContainer: {
     position: 'absolute',
@@ -692,11 +987,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: SCREEN_HEIGHT * 0.6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
   },
   commentsHeader: {
     flexDirection: 'row',
@@ -742,7 +1032,6 @@ const styles = StyleSheet.create({
   commentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 4,
   },
   commentUserName: {
@@ -760,6 +1049,16 @@ const styles = StyleSheet.create({
     fontFamily: regular,
     color: pallette.darkgrey,
     lineHeight: 20,
+  },
+  noCommentsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    fontFamily: medium,
+    color: pallette.darkgrey,
+    marginTop: 12,
   },
   addCommentContainer: {
     flexDirection: 'row',
@@ -810,7 +1109,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   activeDot: {
-    backgroundColor: pallette.white,
+    backgroundColor: pallette.black,
     width: 12,
     height: 12,
     borderRadius: 6,
@@ -826,9 +1125,103 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   swipeHintText: {
-    color: 'rgba(255,255,255,0.8)',
+    color:pallette.black,
     fontSize: 12,
     fontFamily: regular,
+  },
+  // Filter Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(66, 60, 60, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: pallette.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: pallette.lightgrey,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: bold,
+    color: pallette.black,
+  },
+  filterOptions: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontFamily: medium,
+    color: pallette.black,
+    marginBottom: 12,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  filterButton: {
+    width: (SCREEN_WIDTH - 60) / 3,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    backgroundColor: pallette.lightgrey,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: pallette.primary,
+  },
+  filterButtonText: {
+    fontSize: 12,
+    fontFamily: semibold,
+    color: pallette.darkgrey,
+  },
+  filterButtonTextActive: {
+    color: pallette.white,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: pallette.lightgrey,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearButton: {
+    backgroundColor: pallette.lightgrey,
+  },
+  applyButton: {
+    backgroundColor: pallette.primary,
+  },
+  clearButtonText: {
+    color: pallette.darkgrey,
+    fontSize: 16,
+    fontFamily: medium,
+  },
+  applyButtonText: {
+    color: pallette.white,
+    fontSize: 16,
+    fontFamily: medium,
   },
 });
 

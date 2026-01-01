@@ -6,6 +6,7 @@ import TabNav from './app-navigation';
 import LoginScreen from '../Screens/login screens/login-screen';
 import Splash from '../Screens/login screens/splash-screen';
 import ReporterRegistration from '../Screens/Reporter Screens/ReporterRegister';
+import ForgotPasswordScreen from '../Screens/login screens/ForgotPassword-Screen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +39,7 @@ const AppNavigator = () => {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="ReporterRegistration" component={ReporterRegistration} />
+            <Stack.Screen name='ForgotPassword' component={ForgotPasswordScreen}/>
           </>
         )}
       </Stack.Navigator>

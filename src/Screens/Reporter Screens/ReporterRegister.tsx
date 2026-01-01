@@ -42,7 +42,7 @@ const ReporterRegistration = () => {
     idProofNumber: '',
     experience: '',
     specialization: '',
-    roleId:1,
+    roleId:2,
   });
 
   // UI state
@@ -160,7 +160,7 @@ const ReporterRegistration = () => {
         experience: formData.experience ? parseInt(formData.experience) : 0,
         specialization: formData.specialization ? [formData.specialization] :'',
         
-        roleId:1
+        roleId:2
       };
 
       console.log('Registering reporter:', registrationData);
@@ -189,7 +189,7 @@ const ReporterRegistration = () => {
           idProofNumber: '',
           experience: '',
           specialization: '',
-          roleId:1
+          roleId:2
         });
 
         // Navigate after delay

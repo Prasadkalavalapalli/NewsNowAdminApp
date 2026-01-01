@@ -88,10 +88,10 @@ const LoginScreen = () => {
 
   const handleForgotPassword = () => {
     // Navigate to forgot password screen
-     setToast({
-      message: `ForgotPassword login coming soon!`,
-      type: 'info'
-    });
+    //  setToast({
+    //   message: `ForgotPassword login coming soon!`,
+    //   type: 'info'
+    // });
     navigation.navigate('ForgotPassword');
   };
 

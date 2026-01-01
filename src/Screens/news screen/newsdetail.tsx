@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,8 @@ import {
   Modal,
   ActivityIndicator,
   Dimensions,
-  Share,
-  Platform,
   RefreshControl,
+  Share,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -27,18 +26,16 @@ import AlertMessage from '../helpers/alertmessage';
 import apiService from '../../Axios/Api';
 import Loader from '../helpers/loader';
 import Header from '../helpers/header';
+import { useAppContext } from '../../Store/contexts/app-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const NewsDetails = () => {
   const navigation = useNavigation();
   const route = useRoute();
- 
-const { newsId } = route.params || {};
-console.log(newsId);
-  // Refs
-  const commentInputRef = useRef();
-  
+  const { newsId } = route.params || {};
+  const { user } = useAppContext();
+
   // State
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,42 +44,31 @@ console.log(newsId);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [commentsCount, setCommentsCount] = useState(0);
   const [sharesCount, setSharesCount] = useState(0);
-  const [viewsCount, setViewsCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [reportModalVisible, setReportModalVisible] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [relatedNews, setRelatedNews] = useState([]);
   const [alertMessage, setAlertMessage] = useState('');
-  const [showDeleteCommentAlert, setShowDeleteCommentAlert] = useState(false);
-  const [selectedCommentId, setSelectedCommentId] = useState(null);
 
   // Fetch news details
   const fetchNewsDetails = async () => {
     try {
       setLoading(true);
-      
       const response = await apiService.getNewsById(newsId);
       
-      if (response.error===false) {
+      if (response.error === false) {
         const newsData = response.data;
+        console.log('News Data:', newsData);
+        
         setNews(newsData);
         setLiked(newsData.isLiked || false);
-        setBookmarked(newsData.isBookmarked || false);
-        setLikesCount(newsData.likeCount|| 0);
-        setCommentsCount(newsData.commentCount || 0);
-        setSharesCount(newsData.shareCount || 0);
-        setViewsCount(newsData.saveCount|| 0);
+        setSaved(newsData.isSaved || false);
+        setLikesCount(newsData.likesCount || newsData.likeCount || 0);
+        setCommentsCount(newsData.commentsCount || newsData.commentCount || 0);
+        setSharesCount(newsData.sharesCount || newsData.shareCount || 0);
         setComments(newsData.comments || []);
-        setRelatedNews(newsData.relatedNews || []);
-        
-        // Track view count
-        await userAPI.incrementViewCount(newsId);
       } else {
         throw new Error(response.message || 'Failed to fetch news details');
       }
@@ -101,159 +87,128 @@ console.log(newsId);
     }
   }, [newsId]);
 
-  // Handlers
   const handleRefresh = () => {
     setRefreshing(true);
     fetchNewsDetails();
   };
 
+  // Load like status
+  const loadLikeStatus = async (newsId) => {
+    try {
+      const response = await apiService.checkLikeStatus(newsId, user.userId);
+      if (response.error === false) {
+        const likedStatus = response.data?.[0]?.liked || false;
+        setLiked(likedStatus);
+      }
+    } catch (error) {
+      console.error('Error loading like status:', error);
+    }
+  };
+
+  // Handle like action
   const handleLike = async () => {
     try {
-      const newLikedState = !liked;
-      setLiked(newLikedState);
-      setLikesCount(prev => newLikedState ? prev + 1 : prev - 1);
-      
-      const response = await userAPI.toggleLike(newsId, newLikedState);
-      if (!response.success) {
-        setLiked(!newLikedState);
-        setLikesCount(prev => newLikedState ? prev - 1 : prev + 1);
-        throw new Error(response.message || 'Failed to update like');
+      const response = await apiService.toggleLike(newsId,user.userId);
+      if (response.error === false) {
+        // Update local state optimistically
+        const newLikedState = !liked;
+        setLiked(newLikedState);
+        setLikesCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
+        
+        // Refresh like status from server
+        loadLikeStatus(newsId);
       }
     } catch (error) {
-      setAlertMessage(error.message || 'Failed to update like');
+      console.error('Like error:', error);
+      setAlertMessage('Failed to update like');
     }
   };
 
-  const handleBookmark = async () => {
-    try {
-      const newBookmarkedState = !bookmarked;
-      setBookmarked(newBookmarkedState);
-      
-      const response = await userAPI.toggleBookmark(newsId, newBookmarkedState);
-      if (!response.success) {
-        setBookmarked(!newBookmarkedState);
-        throw new Error(response.message || 'Failed to update bookmark');
-      }
-      
-      setToast({
-        message: newBookmarkedState ? 'News bookmarked' : 'News removed from bookmarks',
-        type: 'success'
-      });
-    } catch (error) {
-      setAlertMessage(error.message || 'Failed to update bookmark');
-    }
-  };
-
+  // Handle share action
   const handleShare = async () => {
     try {
-      const shareOptions = {
-        title: news.headline,
-        message: `${news.headline}\n\n${news.description.substring(0, 100)}...`,
-      };
-
-      if (news.shareUrl) {
-        shareOptions.url = news.shareUrl;
-      } else if (Platform.OS === 'ios') {
-        shareOptions.message += `\n\nhttps://newsnow.com/news/${newsId}`;
-      }
-
-      const result = await Share.share(shareOptions);
+      // First, call the share API to increment share count
+      const response = await apiService.shareNews(newsId, user.userId);
       
-      if (result.action === Share.sharedAction) {
+      if (response.error === false) {
+        // Update share count
         setSharesCount(prev => prev + 1);
-        await userAPI.incrementShareCount(newsId);
+        
+        // Create formatted news template
+        const shareTemplate = `
+📰 *${news.headline}* 
+
+${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '...' : news.content || ''}
+
+*Category:* ${news.category || 'General'}
+*Type:* ${news.newsType || 'Regular'}
+*Priority:* ${news.priority || 'Normal'}
+*Published:* ${formatDate(news.createdAt)}
+
+📲 *Shared via NewsApp*
+👉 Read full story in the app for more details!
+
+#${news.category || 'News'} #NewsApp
+        `.trim();
+
+        // Use React Native Share API
+        try {
+          await Share.share({
+            title: news.headline || 'News Article',
+            message: shareTemplate,
+            url: news.mediaUrl || news.imageUrl || 'https://your-app-link.com'
+          });
+        } catch (shareError) {
+          console.log('Share dialog cancelled or failed');
+        }
       }
     } catch (error) {
+      console.error('Share error:', error);
       setAlertMessage('Failed to share news');
     }
   };
 
-  const handleSubmitComment = async () => {
-    if (!commentText.trim()) {
-      setAlertMessage('Please enter a comment');
-      return;
+  // Handle save action
+  const handleSave = async () => {
+    try {
+      // Update local state
+      setSaved(!saved);
+      
+      // If you have a save API endpoint, you would call it here
+      // const response = await apiService.toggleSave?.(newsId, user.userId);
+      // if (response?.error === false) {
+      //   setSaved(!saved);
+      // }
+    } catch (error) {
+      console.error('Save error:', error);
+      setAlertMessage('Failed to save');
     }
+  };
 
+  // Handle comment submission
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || !user?.userId) return;
+    
     try {
       setSubmittingComment(true);
+      const userId = user.userId;
+      const response = await apiService.addComment(newsId, userId, { comment: commentText });
       
-      const response = await userAPI.addComment(newsId, commentText);
-      
-      if (response.success) {
-        const newComment = response.data;
-        setComments(prev => [newComment, ...prev]);
-        setCommentsCount(prev => prev + 1);
+      if (response.error === false) {
         setCommentText('');
-        commentInputRef.current?.blur();
-        setToast({
-          message: 'Comment added successfully',
-          type: 'success'
-        });
-      } else {
-        throw new Error(response.message || 'Failed to add comment');
+        setCommentsCount(prev => prev + 1);
+        fetchNewsDetails(); // Refresh comments
+        setToast({ message: 'Comment added successfully', type: 'success' });
       }
     } catch (error) {
-      setAlertMessage(error.message || 'Failed to add comment');
+      console.error('Comment error:', error);
+      setAlertMessage('Failed to add comment');
     } finally {
       setSubmittingComment(false);
     }
   };
 
-  const handleDeleteComment = (commentId) => {
-    setSelectedCommentId(commentId);
-    setShowDeleteCommentAlert(true);
-  };
-
-  const confirmDeleteComment = async (confirmed) => {
-    setShowDeleteCommentAlert(false);
-    
-    if (!confirmed || !selectedCommentId) return;
-    
-    try {
-      const response = await userAPI.deleteComment(selectedCommentId);
-      
-      if (response.success) {
-        setComments(prev => prev.filter(comment => comment._id !== selectedCommentId));
-        setCommentsCount(prev => prev - 1);
-        setToast({
-          message: 'Comment deleted',
-          type: 'success'
-        });
-      } else {
-        throw new Error(response.message || 'Failed to delete comment');
-      }
-    } catch (error) {
-      setAlertMessage(error.message || 'Failed to delete comment');
-    } finally {
-      setSelectedCommentId(null);
-    }
-  };
-
-  const handleReportNews = async () => {
-    if (!reportReason.trim()) {
-      setAlertMessage('Please enter a reason for reporting');
-      return;
-    }
-
-    try {
-      const response = await userAPI.reportNews(newsId, reportReason);
-      
-      if (response.success) {
-        setReportModalVisible(false);
-        setReportReason('');
-        setToast({
-          message: 'News reported successfully. Our team will review it.',
-          type: 'success'
-        });
-      } else {
-        throw new Error(response.message || 'Failed to report news');
-      }
-    } catch (error) {
-      setAlertMessage(error.message || 'Failed to report news');
-    }
-  };
-
-  // Helper functions
+  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return '';
     try {
@@ -278,6 +233,7 @@ console.log(newsId);
     }
   };
 
+  // Format number (1K, 1M, etc.)
   const formatNumber = (num) => {
     const number = Number(num) || 0;
     if (number >= 1000000) return (number / 1000000).toFixed(1) + 'M';
@@ -285,210 +241,21 @@ console.log(newsId);
     return number.toString();
   };
 
-  // Components
-  const NewsImages = () => {
-    if (!news?.images || news.images.length === 0) return null;
-
-    if (news.images.length === 1) {
-      return (
-        <TouchableOpacity 
-          onPress={() => {
-            setSelectedImageIndex(0);
-            setImageModalVisible(true);
-          }}
-          style={styles.singleImageContainer}
-        >
-          <Image 
-            source={{ uri: news.images[0] }} 
-            style={styles.singleImage}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.multipleImagesContainer}
-      >
-        {news.images.slice(0, 3).map((image, index) => (
-          <TouchableOpacity 
-            key={index}
-            onPress={() => {
-              setSelectedImageIndex(index);
-              setImageModalVisible(true);
-            }}
-            style={styles.multipleImageWrapper}
-          >
-            <Image 
-              source={{ uri: image }} 
-              style={styles.multipleImage}
-              resizeMode="cover"
-            />
-            {index === 2 && news.images.length > 3 && (
-              <View style={styles.moreImagesOverlay}>
-                <Text style={styles.moreImagesText}>+{news.images.length - 3}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    );
-  };
-
+  // Render comment item
   const CommentItem = ({ item }) => (
     <View style={styles.commentItem}>
       <View style={styles.commentHeader}>
-        <View style={styles.commentUserInfo}>
-          <View style={styles.commentAvatar}>
-            <Text style={styles.commentAvatarText}>
-              {item.user?.name?.charAt(0)?.toUpperCase() || 'A'}
-            </Text>
-          </View>
-          <View>
-            <Text style={styles.commentUserName}>{item.user?.name || 'Anonymous'}</Text>
-            <Text style={styles.commentTime}>{formatDate(item.createdAt)}</Text>
-          </View>
-        </View>
-        
-        {item.isOwnComment && (
-          <TouchableOpacity 
-            onPress={() => handleDeleteComment(item._id)}
-            style={styles.deleteCommentButton}
-          >
-            <Icon name="trash" size={14} color={pallette.grey} />
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      <Text style={styles.commentText}>{item.text}</Text>
-    </View>
-  );
-
-  const RelatedNewsItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.relatedNewsItem}
-      onPress={() => navigation.push('NewsView', { newsId: item._id })}
-    >
-      {item.thumbnail || item.images?.[0] ? (
-        <Image 
-          source={{ uri: item.thumbnail || item.images?.[0] }} 
-          style={styles.relatedNewsImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.relatedNewsImagePlaceholder}>
-          <Icon name="newspaper" size={30} color={pallette.lightgrey} />
-        </View>
-      )}
-      <View style={styles.relatedNewsContent}>
-        <Text style={styles.relatedNewsTitleText} numberOfLines={2}>
-          {item.headline}
-        </Text>
-        <Text style={styles.relatedNewsMeta}>
-          {formatDate(item.createdAt)} • {item.category}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const ActionButtons = () => (
-    <View style={styles.actionButtonsContainer}>
-      <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-        <Icon 
-          name="heart" 
-          solid={liked}
-          size={22} 
-          color={liked ? pallette.red : pallette.grey} 
-        />
-        <Text style={[styles.actionButtonText, liked && styles.likedText]}>
-          {formatNumber(likesCount)}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.actionButton}
-        onPress={() => commentInputRef.current?.focus()}
-      >
-        <Icon name="comment" size={22} color={pallette.grey} />
-        <Text style={styles.actionButtonText}>{formatNumber(commentsCount)}</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-        <Icon name="share" size={22} color={pallette.grey} />
-        <Text style={styles.actionButtonText}>{formatNumber(sharesCount)}</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.actionButton} onPress={handleBookmark}>
-        <Icon 
-          name="bookmark" 
-          solid={bookmarked}
-          size={22} 
-          color={bookmarked ? pallette.primary : pallette.grey} 
-        />
-        <Text style={styles.actionButtonText}>{formatNumber(viewsCount)}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const AddCommentSection = () => (
-    <View style={styles.addCommentContainer}>
-      <View style={styles.userAvatar}>
-        <Text style={styles.userAvatarText}>{'U'}</Text>
-      </View>
-      <View style={styles.commentInputContainer}>
-        <TextInput
-          ref={commentInputRef}
-          style={styles.commentInput}
-          value={commentText}
-          onChangeText={setCommentText}
-          placeholder="Add a comment..."
-          placeholderTextColor={pallette.grey}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity 
-          style={[
-            styles.submitCommentButton,
-            (!commentText.trim() || submittingComment) && styles.submitCommentButtonDisabled
-          ]}
-          onPress={handleSubmitComment}
-          disabled={!commentText.trim() || submittingComment}
-        >
-          {submittingComment ? (
-            <ActivityIndicator size="small" color={pallette.white} />
-          ) : (
-            <Icon name="paper-plane" size={16} color={pallette.white} />
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const NewsMetadata = () => (
-    <View style={styles.metaContainer}>
-      <View style={styles.reporterInfo}>
-        <View style={styles.reporterAvatar}>
-          <Text style={styles.reporterAvatarText}>
-            {news.reporter?.name?.charAt(0)?.toUpperCase() || 'R'}
+        <View style={styles.commentAvatar}>
+          <Text style={styles.commentAvatarText}>
+            {item.user?.name?.charAt(0)?.toUpperCase() || item.userName?.charAt(0)?.toUpperCase() || 'U'}
           </Text>
         </View>
         <View>
-          <Text style={styles.reporterName}>{news.reporterName|| 'Staff Reporter'}</Text>
-          <Text style={styles.newsMeta}>
-            {formatDate(news.uploadedAt)} • {news.city || 'Unknown Location'}
-          </Text>
+          <Text style={styles.commentUserName}>{item.user?.name || item.userName || 'Anonymous'}</Text>
+          <Text style={styles.commentTime}>{formatDate(item.createdAt)}</Text>
         </View>
       </View>
-      
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Icon name="eye" size={14} color={pallette.grey} />
-          <Text style={styles.statText}>{formatNumber(viewsCount)}</Text>
-        </View>
-      </View>
+      <Text style={styles.commentText}>{item.comment || item.text}</Text>
     </View>
   );
 
@@ -503,9 +270,6 @@ console.log(newsId);
       <SafeAreaView style={styles.container}>
         <Header
           onback={() => navigation.goBack()}
-          active={1}
-          onSkip={() => {}}
-          skippable={false}
           hastitle={true}
           title={'News Details'}
         />
@@ -523,6 +287,9 @@ console.log(newsId);
     );
   }
 
+  // Get the first image (if multiple images exist)
+  const firstImage = news.images?.[0] || news.imageUrl || news.mediaUrl || news.thumbnail;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={pallette.white} />
@@ -539,11 +306,8 @@ console.log(newsId);
       {/* Header */}
       <Header
         onback={() => navigation.goBack()}
-        active={1}
-        onSkip={() => {}}
-        skippable={false}
         hastitle={true}
-        title={'Detail News'}
+        title={'News Details'}
       />
 
       <ScrollView 
@@ -560,83 +324,220 @@ console.log(newsId);
       >
         {/* News Content */}
         <View style={styles.newsContent}>
-         
-         {/* News Type Badges */}
-          {(news || news.isLiveNews) && (
-            <View style={styles.newsTypeBadges}>
-              {news && (
-                <View style={styles.breakingBadge}>
-                  <Icon name="bolt" size={12} color={pallette.white} />
-                  <Text style={styles.breakingText}>{news.category}</Text>
-                </View>
-              )}
-              {news.isLiveNews && (
-                <View style={styles.liveBadge}>
-                  <Icon name="signal" size={12} color={pallette.white} />
-                  <Text style={styles.liveText}>LIVE</Text>
-                </View>
-              )}
-            </View>
-          )}
-          
           {/* Headline */}
-          <Text style={styles.headline}>{news.headline}</Text>
-         
+          <Text style={styles.headline}>{news.headline || news.title}</Text>
           
-          {/* Images */}
-          <NewsImages />
+          {/* First Image */}
+          {firstImage && (
+            <TouchableOpacity 
+              onPress={() => setImageModalVisible(true)}
+              style={styles.imageContainer}
+            >
+              <Image 
+                source={{ uri: firstImage }} 
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          )}
           
-          {/* Description */}
-          <Text style={styles.description}>{news.content}</Text>
+          {/* Content/Description */}
+          <Text style={styles.content}>{news.content || news.description}</Text>
           
+          {/* Category */}
+          {news.category && (
+            <View style={styles.categoryContainer}>
+              <Text style={styles.categoryLabel}>Category:</Text>
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryText}>{news.category}</Text>
+              </View>
+            </View>
+          )}
           
+          {/* News Type */}
+          {news.newsType && (
+            <View style={styles.categoryContainer}>
+              <Text style={styles.categoryLabel}>News Type:</Text>
+              <View style={styles.tag}>
+                <Text style={styles.categoryText}>{news.newsType}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Priority */}
+          {news.priority && (
+            <View style={styles.priorityContainer}>
+              <Text style={styles.priorityLabel}>Priority:</Text>
+              <View style={[
+                styles.priorityBadge,
+                news.priority === 'High' && styles.highPriority,
+                news.priority === 'Medium' && styles.mediumPriority,
+                news.priority === 'Low' && styles.lowPriority,
+              ]}>
+                <Text style={styles.priorityText}>{news.priority}</Text>
+              </View>
+            </View>
+          )}
+
           {/* Tags */}
-          {news.tags && (
+          {news.tags && news.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              {news.tags.split(',').map((tag, index) => (
-                <View key={index} style={styles.tagButton}>
-                  <Text style={styles.tagText}>#{tag.trim()}</Text>
-                </View>
-              ))}
+              <Text style={styles.tagsLabel}>Tags:</Text>
+              <View style={styles.tagsList}>
+                {Array.isArray(news.tags) 
+                  ? news.tags.map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>#{tag.trim()}</Text>
+                      </View>
+                    ))
+                  : typeof news.tags === 'string' && news.tags.split(',').map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>#{tag.trim()}</Text>
+                      </View>
+                    ))
+                }
+              </View>
             </View>
           )}
-          
-           {/* Category Badge */}
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{news.category}</Text>
+
+          {/* Reporter Details */}
+          <View style={styles.reporterContainer}>
+            <Text style={styles.sectionTitle}>Reporter Details</Text>
+            <View style={styles.reporterInfo}>
+              <View style={styles.reporterAvatar}>
+                <Text style={styles.reporterAvatarText}>
+                  {news.reporterName?.charAt(0)?.toUpperCase() || news.reporter?.name?.charAt(0)?.toUpperCase() || 'R'}
+                </Text>
+              </View>
+              <View style={styles.reporterDetails}>
+                <Text style={styles.reporterName}>
+                  {news.reporterName || news.reporter?.name || 'Staff Reporter'}
+                </Text>
+                {news.reporterEmail && (
+                  <Text style={styles.reporterEmail}>{news.reporterEmail}</Text>
+                )}
+                {news.reporterPhone && (
+                  <Text style={styles.reporterContact}>{news.reporterPhone}</Text>
+                )}
+              </View>
+            </View>
           </View>
-          {/* Source */}
-          {news.source && (
-            <View style={styles.sourceContainer}>
-              <Text style={styles.sourceLabel}>Source:</Text>
-              <Text style={styles.sourceText}>{news.reporterEmail}</Text>
+
+          {/* News Metadata */}
+          <View style={styles.metadataContainer}>
+            <Text style={styles.sectionTitle}>News Information</Text>
+            <View style={styles.metadataGrid}>
+              {news.city && (
+                <View style={styles.metadataItem}>
+                  <Icon name="location-dot" size={14} color={pallette.primary} />
+                  <Text style={styles.metadataText}>{news.city}</Text>
+                </View>
+              )}
+              {news.state && (
+                <View style={styles.metadataItem}>
+                  <Icon name="map" size={14} color={pallette.primary} />
+                  <Text style={styles.metadataText}>{news.state}</Text>
+                </View>
+              )}
+              {news.district && (
+                <View style={styles.metadataItem}>
+                  <Icon name="location-crosshairs" size={14} color={pallette.primary} />
+                  <Text style={styles.metadataText}>{news.district}</Text>
+                </View>
+              )}
+              {news.createdAt && (
+                <View style={styles.metadataItem}>
+                  <Icon name="calendar" size={14} color={pallette.primary} />
+                  <Text style={styles.metadataText}>{formatDate(news.createdAt)}</Text>
+                </View>
+              )}
+              {news.updatedAt && (
+                <View style={styles.metadataItem}>
+                  <Icon name="clock-rotate-left" size={14} color={pallette.primary} />
+                  <Text style={styles.metadataText}>Updated: {formatDate(news.updatedAt)}</Text>
+                </View>
+              )}
             </View>
-          )}
-
-
-           
-          {/* Metadata */}
-          <NewsMetadata />
-          
-          
-
-
+          </View>
         </View>
 
         {/* Action Buttons */}
-        <ActionButtons />
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+            <Icon 
+              name="heart" 
+              size={22} 
+              solid={liked}
+              color={liked ? pallette.red : pallette.darkgrey} 
+            />
+            <Text style={[styles.actionCount, liked && styles.likedText]}>
+              {formatNumber(likesCount)}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton}>
+            <Icon name="comment" size={22} color={pallette.darkgrey} />
+            <Text style={styles.actionCount}>
+              {formatNumber(commentsCount)}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+            <Icon name="share" size={22} color={pallette.darkgrey} />
+            <Text style={styles.actionCount}>
+              {formatNumber(sharesCount)}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+            <Icon 
+              name="bookmark" 
+              size={22} 
+              solid={saved}
+              color={saved ? pallette.primary : pallette.darkgrey} 
+            />
+            <Text style={styles.actionText}>Save</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Comments Section */}
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>Comments ({commentsCount})</Text>
           
-          <AddCommentSection />
+          {/* Add Comment */}
+          <View style={styles.addCommentContainer}>
+            <View style={styles.commentInputContainer}>
+              <TextInput
+                style={styles.commentInput}
+                value={commentText}
+                onChangeText={setCommentText}
+                placeholder="Add a comment..."
+                placeholderTextColor={pallette.grey}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity 
+                style={[
+                  styles.submitCommentButton,
+                  (!commentText.trim() || submittingComment) && styles.submitCommentButtonDisabled
+                ]}
+                onPress={handleSubmitComment}
+                disabled={!commentText.trim() || submittingComment}
+              >
+                {submittingComment ? (
+                  <ActivityIndicator size="small" color={pallette.white} />
+                ) : (
+                  <Icon name="paper-plane" size={16} color={pallette.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
           
           {/* Comments List */}
           <FlatList
             data={comments}
             renderItem={CommentItem}
-            keyExtractor={item => item._id}
+            keyExtractor={(item, index) => item.id || item._id || index.toString()}
             scrollEnabled={false}
             ListEmptyComponent={
               <View style={styles.noCommentsContainer}>
@@ -648,131 +549,38 @@ console.log(newsId);
           />
         </View>
 
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
       {/* Image Viewer Modal */}
-      <Modal
-        visible={imageModalVisible}
-        transparent={true}
-        onRequestClose={() => setImageModalVisible(false)}
-      >
-        <View style={styles.imageModalOverlay}>
-          <TouchableOpacity 
-            style={styles.imageModalCloseButton}
-            onPress={() => setImageModalVisible(false)}
-          >
-            <Icon name="xmark" size={24} color={pallette.white} />
-          </TouchableOpacity>
-          
-          {news?.images && (
-            <>
-              <Image 
-                source={{ uri: news.images[selectedImageIndex] }} 
-                style={styles.imageModalImage}
-                resizeMode="contain"
-              />
-              
-              <View style={styles.imageModalIndicator}>
-                <Text style={styles.imageModalIndicatorText}>
-                  {selectedImageIndex + 1} / {news.images.length}
-                </Text>
-              </View>
-              
-              {news.images.length > 1 && (
-                <>
-                  {selectedImageIndex > 0 && (
-                    <TouchableOpacity 
-                      style={[styles.imageNavButton, styles.prevButton]}
-                      onPress={() => setSelectedImageIndex(prev => prev - 1)}
-                    >
-                      <Icon name="chevron-left" size={24} color={pallette.white} />
-                    </TouchableOpacity>
-                  )}
-                  
-                  {selectedImageIndex < news.images.length - 1 && (
-                    <TouchableOpacity 
-                      style={[styles.imageNavButton, styles.nextButton]}
-                      onPress={() => setSelectedImageIndex(prev => prev + 1)}
-                    >
-                      <Icon name="chevron-right" size={24} color={pallette.white} />
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </View>
-      </Modal>
-
-      {/* Report Modal */}
-      <Modal
-        visible={reportModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setReportModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.reportModal}>
-            <View style={styles.reportModalHeader}>
-              <Text style={styles.reportModalTitle}>Report News</Text>
-              <TouchableOpacity onPress={() => setReportModalVisible(false)}>
-                <Icon name="xmark" size={20} color={pallette.grey} />
-              </TouchableOpacity>
-            </View>
+      {firstImage && (
+        <Modal
+          visible={imageModalVisible}
+          transparent={true}
+          onRequestClose={() => setImageModalVisible(false)}
+        >
+          <View style={styles.imageModalOverlay}>
+            <TouchableOpacity 
+              style={styles.imageModalCloseButton}
+              onPress={() => setImageModalVisible(false)}
+            >
+              <Icon name="xmark" size={24} color={pallette.white} />
+            </TouchableOpacity>
             
-            <Text style={styles.reportModalText}>
-              Please tell us why you're reporting this news:
-            </Text>
-            
-            <TextInput
-              style={styles.reportInput}
-              value={reportReason}
-              onChangeText={setReportReason}
-              placeholder="Enter reason..."
-              placeholderTextColor={pallette.grey}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
+            <Image 
+              source={{ uri: firstImage }} 
+              style={styles.imageModalImage}
+              resizeMode="contain"
             />
-            
-            <View style={styles.reportModalActions}>
-              <TouchableOpacity 
-                style={styles.reportCancelButton}
-                onPress={() => setReportModalVisible(false)}
-              >
-                <Text style={styles.reportCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.reportSubmitButton,
-                  !reportReason.trim() && styles.reportSubmitButtonDisabled
-                ]}
-                onPress={handleReportNews}
-                disabled={!reportReason.trim()}
-              >
-                <Text style={styles.reportSubmitText}>Submit Report</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
       {/* Alert Messages */}
       {alertMessage && (
         <AlertMessage
           message={alertMessage}
           onClose={() => setAlertMessage('')}
-        />
-      )}
-      
-      {showDeleteCommentAlert && (
-        <AlertMessage
-          message="Are you sure you want to delete this comment?"
-          onClose={confirmDeleteComment}
-          showConfirm={true}
         />
       )}
     </SafeAreaView>
@@ -782,32 +590,84 @@ console.log(newsId);
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: pallette.lightgrey,
-    paddingTop: 20,
+    backgroundColor: pallette.white,
+    marginTop: 20,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: pallette.lightgrey,
     paddingHorizontal: w * 0.1,
   },
   scrollView: {
     flex: 1,
   },
   newsContent: {
-    backgroundColor: pallette.white,
     paddingHorizontal: w * 0.04,
-    paddingVertical: h * 0.03,
+    paddingTop: h * 0.02,
+  },
+  newsTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    gap: 6,
     marginBottom: h * 0.02,
   },
+  breakingBadge: {
+    backgroundColor: pallette.red,
+  },
+  liveBadge: {
+    backgroundColor: pallette.primary,
+  },
+  newsTypeText: {
+    fontSize: adjust(10),
+    fontFamily: bold,
+    color: pallette.white,
+    textTransform: 'uppercase',
+  },
+  headline: {
+    fontSize: adjust(18),
+    fontFamily: bold,
+    color: pallette.black,
+    lineHeight: 32,
+    marginBottom: h * 0.02,
+  },
+  imageContainer: {
+    marginBottom: h * 0.03,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: 250,
+    borderRadius: 12,
+  },
+  content: {
+    fontSize: adjust(14),
+    fontFamily: regular,
+    color: pallette.black,
+    lineHeight: 24,
+    marginBottom: h * 0.03,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: h * 0.02,
+  },
+  categoryLabel: {
+    fontSize: adjust(14),
+    fontFamily: medium,
+    color: pallette.grey,
+    marginRight: 8,
+  },
   categoryBadge: {
-    alignSelf: 'flex-start',
     backgroundColor: pallette.lightprimary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    marginBottom: h * 0.02,
   },
   categoryText: {
     fontSize: adjust(12),
@@ -815,154 +675,50 @@ const styles = StyleSheet.create({
     color: pallette.primary,
     textTransform: 'uppercase',
   },
-  headline: {
-    fontSize: adjust(24),
-    fontFamily: bold,
-    color: pallette.black,
-    lineHeight: 32,
-    marginBottom: h * 0.02,
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: h * 0.02,
-    paddingBottom: h * 0.02,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
-  },
-  reporterInfo: {
+  priorityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: h * 0.02,
   },
-  reporterAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: pallette.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  reporterAvatarText: {
-    color: pallette.white,
-    fontSize: adjust(14),
-    fontFamily: bold,
-  },
-  reporterName: {
+  priorityLabel: {
     fontSize: adjust(14),
     fontFamily: medium,
-    color: pallette.black,
-  },
-  newsMeta: {
-    fontSize: adjust(12),
-    fontFamily: regular,
     color: pallette.grey,
-    marginTop: 2,
+    marginRight: 8,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  priorityBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 12,
+  highPriority: {
+    backgroundColor: '#FFE5E5',
   },
-  statText: {
+  mediumPriority: {
+    backgroundColor: '#FFF4E5',
+  },
+  lowPriority: {
+    backgroundColor: '#E5F4FF',
+  },
+  priorityText: {
     fontSize: adjust(12),
-    fontFamily: regular,
-    color: pallette.grey,
-    marginLeft: 4,
-  },
-  newsTypeBadges: {
-    flexDirection: 'row',
-    marginBottom: h * 0.02,
-    gap: 8,
-  },
-  breakingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: pallette.red,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    gap: 6,
-  },
-  breakingText: {
-    fontSize: adjust(10),
     fontFamily: bold,
-    color: pallette.white,
-    textTransform: 'uppercase',
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: pallette.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    gap: 6,
-  },
-  liveText: {
-    fontSize: adjust(10),
-    fontFamily: bold,
-    color: pallette.white,
-    textTransform: 'uppercase',
-  },
-  singleImageContainer: {
-    marginBottom: h * 0.03,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  singleImage: {
-    width: '100%',
-    height: 250,
-    borderRadius: 12,
-  },
-  multipleImagesContainer: {
-    marginBottom: h * 0.03,
-  },
-  multipleImageWrapper: {
-    position: 'relative',
-    marginRight: 10,
-  },
-  multipleImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 8,
-  },
-  moreImagesOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreImagesText: {
-    color: pallette.white,
-    fontSize: adjust(20),
-    fontFamily: bold,
-  },
-  description: {
-    fontSize: adjust(16),
-    fontFamily: regular,
-    color: pallette.black,
-    lineHeight: 24,
-    marginBottom: h * 0.03,
   },
   tagsContainer: {
+    marginBottom: h * 0.03,
+  },
+  tagsLabel: {
+    fontSize: adjust(14),
+    fontFamily: medium,
+    color: pallette.grey,
+    marginBottom: 8,
+  },
+  tagsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: h * 0.03,
   },
-  tagButton: {
+  tag: {
     backgroundColor: pallette.lightgrey,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -973,26 +729,85 @@ const styles = StyleSheet.create({
     fontFamily: medium,
     color: pallette.primary,
   },
-  sourceContainer: {
-    flexDirection: 'row',
-    marginBottom: h * 0.02,
+  reporterContainer: {
+    backgroundColor: pallette.lightgrey,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: h * 0.03,
   },
-  sourceLabel: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.grey,
-    marginRight: 6,
-  },
-  sourceText: {
-    fontSize: adjust(14),
-    fontFamily: regular,
+  sectionTitle: {
+    fontSize: adjust(16),
+    fontFamily: semibold,
     color: pallette.black,
+    marginBottom: 12,
   },
-  actionButtonsContainer: {
+  reporterInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reporterAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: pallette.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  reporterAvatarText: {
+    color: pallette.white,
+    fontSize: adjust(20),
+    fontFamily: bold,
+  },
+  reporterDetails: {
+    flex: 1,
+  },
+  reporterName: {
+    fontSize: adjust(16),
+    fontFamily: semibold,
+    color: pallette.black,
+    marginBottom: 4,
+  },
+  reporterEmail: {
+    fontSize: adjust(12),
+    fontFamily: regular,
+    color: pallette.darkgrey,
+    marginBottom: 2,
+  },
+  reporterContact: {
+    fontSize: adjust(12),
+    fontFamily: regular,
+    color: pallette.darkgrey,
+  },
+  metadataContainer: {
+    backgroundColor: pallette.lightgrey,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: h * 0.03,
+  },
+  metadataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: pallette.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  metadataText: {
+    fontSize: adjust(12),
+    fontFamily: medium,
+    color: pallette.darkgrey,
+  },
+  actionBar: {
     flexDirection: 'row',
     backgroundColor: pallette.white,
     paddingVertical: h * 0.02,
-    marginBottom: h * 0.02,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderTopColor: pallette.lightgrey,
@@ -1002,22 +817,26 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    gap: 6,
   },
-  actionButtonText: {
-    fontSize: adjust(12),
+  actionCount: {
+    fontSize: adjust(14),
     fontFamily: medium,
-    color: pallette.grey,
-    marginTop: 6,
+    color: pallette.darkgrey,
   },
   likedText: {
     color: pallette.red,
+  },
+  actionText: {
+    fontSize: adjust(12),
+    fontFamily: medium,
+    color: pallette.grey,
+    marginTop: 4,
   },
   commentsSection: {
     backgroundColor: pallette.white,
     paddingHorizontal: w * 0.04,
     paddingVertical: h * 0.03,
-    marginBottom: h * 0.02,
   },
   commentsTitle: {
     fontSize: adjust(18),
@@ -1026,26 +845,9 @@ const styles = StyleSheet.create({
     marginBottom: h * 0.02,
   },
   addCommentContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     marginBottom: h * 0.03,
   },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: pallette.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  userAvatarText: {
-    color: pallette.white,
-    fontSize: adjust(16),
-    fontFamily: bold,
-  },
   commentInputContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderWidth: 1,
@@ -1080,14 +882,8 @@ const styles = StyleSheet.create({
   },
   commentHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  commentUserInfo: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 8,
   },
   commentAvatar: {
     width: 32,
@@ -1114,9 +910,6 @@ const styles = StyleSheet.create({
     color: pallette.grey,
     marginTop: 2,
   },
-  deleteCommentButton: {
-    padding: 4,
-  },
   commentText: {
     fontSize: adjust(14),
     fontFamily: regular,
@@ -1138,50 +931,6 @@ const styles = StyleSheet.create({
     fontFamily: regular,
     color: pallette.grey,
     marginTop: 4,
-  },
-  relatedNewsSection: {
-    backgroundColor: pallette.white,
-    paddingHorizontal: w * 0.04,
-    paddingVertical: h * 0.03,
-    marginBottom: h * 0.02,
-  },
-  relatedNewsTitle: {
-    fontSize: adjust(18),
-    fontFamily: semibold,
-    color: pallette.black,
-    marginBottom: h * 0.02,
-  },
-  relatedNewsItem: {
-    width: 200,
-    marginRight: 12,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: pallette.lightgrey,
-  },
-  relatedNewsImage: {
-    width: '100%',
-    height: 120,
-  },
-  relatedNewsImagePlaceholder: {
-    width: '100%',
-    height: 120,
-    backgroundColor: pallette.lightgrey,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  relatedNewsContent: {
-    padding: 12,
-  },
-  relatedNewsTitleText: {
-    fontSize: adjust(14),
-    fontFamily: semibold,
-    color: pallette.black,
-    marginBottom: 4,
-  },
-  relatedNewsMeta: {
-    fontSize: adjust(12),
-    fontFamily: regular,
-    color: pallette.grey,
   },
   bottomSpacer: {
     height: h * 0.03,
@@ -1206,107 +955,7 @@ const styles = StyleSheet.create({
   },
   imageModalImage: {
     width: SCREEN_WIDTH,
-    height: h,
-  },
-  imageModalIndicator: {
-    position: 'absolute',
-    top: 40,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  imageModalIndicatorText: {
-    color: pallette.white,
-    fontSize: adjust(14),
-    fontFamily: medium,
-  },
-  imageNavButton: {
-    position: 'absolute',
-    top: '50%',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prevButton: {
-    left: 20,
-  },
-  nextButton: {
-    right: 20,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  reportModal: {
-    backgroundColor: pallette.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  reportModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  reportModalTitle: {
-    fontSize: adjust(18),
-    fontFamily: semibold,
-    color: pallette.black,
-  },
-  reportModalText: {
-    fontSize: adjust(14),
-    fontFamily: regular,
-    color: pallette.black,
-    marginBottom: 16,
-  },
-  reportInput: {
-    borderWidth: 1,
-    borderColor: pallette.lightgrey,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: adjust(14),
-    fontFamily: regular,
-    color: pallette.black,
-    minHeight: 100,
-    marginBottom: 20,
-    textAlignVertical: 'top',
-  },
-  reportModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  reportCancelButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  reportCancelText: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.grey,
-  },
-  reportSubmitButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: pallette.red,
-  },
-  reportSubmitButtonDisabled: {
-    backgroundColor: pallette.lightgrey,
-  },
-  reportSubmitText: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.white,
+    height: '80%',
   },
   errorText: {
     fontSize: adjust(16),

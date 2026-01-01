@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==================== AXIOS CONFIGURATION ====================
 const apiClient = axios.create({
-  baseURL: ' https://530c7fc00442.ngrok-free.app/api/',
+  baseURL: 'https://tetrapterous-attributable-daniella.ngrok-free.dev/api/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -154,14 +154,6 @@ export const apiService = {
   },
 
   // ===== NEWS MANAGEMENT =====
-  uploadNews: async (userId, newsData) => {
-    try {
-      const response = await apiClient.post(`/admin/news/upload/${userId}`, newsData);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
 
   getAllNews: async (params) => {
     console.log('parameters  =====   ',params  )
@@ -223,9 +215,9 @@ export const apiService = {
     }
   },
 
-  updateReporterStatus: async (reporterId, enabled) => {
+  updateReporterStatus: async (reporterId) => {
     try {
-      const response = await apiClient.put(`/admin/reporters/${reporterId}/status`, { enabled });
+      const response = await apiClient.put(`admin/reporters/${reporterId}/toggle-status`);
       return response;
     } catch (error) {
       return error;
@@ -340,412 +332,185 @@ updateTicketStatus: async (data) => {
   }
 },
 
-  addTicketComment: async (ticketId, comment) => {
+// ===== ADMIN NEWS MANAGEMENT =====
+  approveAndPublishNews: async (newsId, newsData) => {
     try {
-      const response = await apiClient.post(`/tickets/${ticketId}/comments`, { comment });
+      const response = await apiClient.put(`admin/${newsId}/publish`, newsData);
+      console.log('Approve news response:', response);
       return response;
     } catch (error) {
-      return error;
-    }
-  },
-
-  getTicketComments: async (ticketId) => {
-    try {
-      const response = await apiClient.get(`/tickets/${ticketId}/comments`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== ANALYTICS & REPORTS =====
-  getNewsAnalytics: async (userId, startDate, endDate) => {
-    try {
-      const response = await apiClient.get(`/analytics/news`, {
-        params: { userId, startDate, endDate }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getReporterPerformance: async (reporterId, period = 'monthly') => {
-    try {
-      const response = await apiClient.get(`/analytics/reporters/${reporterId}/performance`, {
-        params: { period }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getCategoryDistribution: async () => {
-    try {
-      const response = await apiClient.get('/analytics/categories');
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getStatusDistribution: async () => {
-    try {
-      const response = await apiClient.get('/analytics/status');
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== NOTIFICATIONS =====
-  getNotifications: async (userId) => {
-    try {
-      const response = await apiClient.get(`/notifications/${userId}`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  markNotificationAsRead: async (notificationId) => {
-    try {
-      const response = await apiClient.put(`/notifications/${notificationId}/read`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  markAllNotificationsAsRead: async (userId) => {
-    try {
-      const response = await apiClient.put(`/notifications/${userId}/read-all`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  deleteNotification: async (notificationId) => {
-    try {
-      const response = await apiClient.delete(`/notifications/${notificationId}`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== ENGAGEMENT =====
-  addComment: async (newsId, comment) => {
-    try {
-      const response = await apiClient.post(`/news/${newsId}/comments`, { comment });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getComments: async (newsId) => {
-    try {
-      const response = await apiClient.get(`/news/${newsId}/comments`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  toggleLike: async (newsId) => {
-    try {
-      const response = await apiClient.post(`/news/${newsId}/like`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  shareNews: async (newsId) => {
-    try {
-      const response = await apiClient.post(`/news/${newsId}/share`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  toggleSave: async (newsId) => {
-    try {
-      const response = await apiClient.post(`/news/${newsId}/save`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getEngagementStats: async (newsId) => {
-    try {
-      const response = await apiClient.get(`/news/${newsId}/engagement`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== FILE UPLOAD =====
-  uploadMedia: async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await apiClient.post('/upload/media', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  uploadDocument: async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await apiClient.post('/upload/document', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  deleteFile: async (fileUrl) => {
-    try {
-      const response = await apiClient.delete('/upload/file', {
-        params: { fileUrl }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== SETTINGS =====
-  getSettings: async () => {
-    try {
-      const response = await apiClient.get('/settings');
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  updateSettings: async (settings) => {
-    try {
-      const response = await apiClient.put('/settings', settings);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getPreferences: async (userId) => {
-    try {
-      const response = await apiClient.get(`/settings/${userId}/preferences`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  updatePreferences: async (userId, preferences) => {
-    try {
-      const response = await apiClient.put(`/settings/${userId}/preferences`, preferences);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== PUBLIC APIs =====
-  getPublishedNews: async (page = 1, limit = 10, filters = {}) => {
-    try {
-      const response = await apiClient.get('/public/news', {
-        params: { page, limit, ...filters }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getNewsByCategory: async (category, page = 1, limit = 10) => {
-    try {
-      const response = await apiClient.get(`/public/news/category/${category}`, {
-        params: { page, limit }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  searchNews: async (query, page = 1, limit = 10) => {
-    try {
-      const response = await apiClient.get('/public/news/search', {
-        params: { q: query, page, limit }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getTrendingNews: async (limit = 10) => {
-    try {
-      const response = await apiClient.get('/public/news/trending', {
-        params: { limit }
-      });
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  getPublicNewsById: async (newsId) => {
-    try {
-      const response = await apiClient.get(`/public/news/${newsId}`);
-      return response;
-    } catch (error) {
-      return error;
-    }
-  },
-
-  // ===== HELPER METHODS =====
-  setAuthToken: (token) => {
-    if (token) {
-      localStorage.setItem('token', token);
-      apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.error('Approve news error:', error);
       return {
-        message: 'Token set successfully',
-        error: false,
-        data: null
-      };
-    }
-    return {
-      message: 'No token provided',
-      error: true,
-      data: null
-    };
-  },
-
-  clearAuthToken: () => {
-    localStorage.removeItem('token');
-    delete apiClient.defaults.headers.common['Authorization'];
-    return {
-      message: 'Token cleared',
-      error: false,
-      data: null
-    };
-  },
-
-  isAuthenticated: () => {
-    const token = localStorage.getItem('token');
-    return {
-      message: token ? 'Authenticated' : 'Not authenticated',
-      error: !token,
-      data: { isAuthenticated: !!token }
-    };
-  },
-
-  getCurrentUserId: () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return {
-        message: 'No token found',
-        error: true,
-        data: null
-      };
-    }
-    
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const userId = payload.userId || payload.sub || null;
-      return {
-        message: 'User ID retrieved',
-        error: false,
-        data: { userId }
-      };
-    } catch {
-      return {
-        message: 'Invalid token',
+        message: error.message || 'Failed to approve and publish news',
         error: true,
         data: null
       };
     }
   },
 
-  getCurrentUserRole: () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return {
-        message: 'No token found',
-        error: true,
-        data: null
-      };
-    }
-    
+  rejectNews: async (newsId, reason) => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const role = payload.role || null;
+      const response = await apiClient.put(`admin/${newsId}/reject`, { reason });
+      console.log('Reject news response:', response);
+      return response;
+    } catch (error) {
+      console.error('Reject news error:', error);
       return {
-        message: 'User role retrieved',
-        error: false,
-        data: { role }
-      };
-    } catch {
-      return {
-        message: 'Invalid token',
+        message: error.message || 'Failed to reject news',
         error: true,
         data: null
       };
     }
   },
+ // ===== NEWS INTERACTION APIS =====
 
-  downloadFile: async (url, filename) => {
-    try {
-      const response = await apiClient.get(url, {
-        responseType: 'blob'
-      });
-      
-      const blob = new Blob([response.data]);
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      
-      return {
-        message: 'File downloaded successfully',
-        error: false,
-        data: null
-      };
-    } catch (error) {
-      return {
-        message: 'Failed to download file',
-        error: true,
-        data: null
-      };
-    }
+// Toggle like for a news
+toggleLike: async (newsId, userId) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/like/${userId}`);
+    return response;
+  } catch (error) {
+    console.error("Toggle like error:", error);
+    return error;
   }
+},
+
+// Check if user liked a news
+checkLikeStatus: async (newsId, userId) => {
+  try {
+    const response = await apiClient.get(`news/likecheck?userId=${userId}&newsId=${newsId}`);
+    return response;
+  } catch (error) {
+    console.error("Check like status error:", error);
+    return error;
+  }
+},
+
+// Add a comment to news
+addComment: async (newsId, userId, comment) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/comment/${userId}`,comment);
+    return response;
+  } catch (error) {
+    console.error("Add comment error:", error);
+    return error;
+  }
+},
+
+// Get comments for a news
+getComments: async (newsId) => {
+  try {
+    const response = await apiClient.get(`news/${newsId}/comments`);
+    return response;
+  } catch (error) {
+    console.error("Get comments error:", error);
+    return error;
+  }
+},
+
+// Share a news
+shareNews: async (newsId, userId) => {
+  try {
+    const response = await apiClient.post(`news/${newsId}/share/${userId}`);
+    return response;
+  } catch (error) {
+    console.error("Share news error:", error);
+    return error;
+  }
+},
+
+// Get counts (likes, comments, shares) for news
+getCounts: async (newsId) => {
+  try {
+    const response = await apiClient.get(`news/${newsId}/counts`);
+    return response;
+  } catch (error) {
+    console.error("Get counts error:", error);
+    return error;
+  }
+},
+
+// Get published news with optional filters
+getPublishedNews: async (filters = {}) => {
+  try {
+    // Build query parameters
+    let queryString = '';
+    const params = [];
+    
+    if (filters.category) params.push(`category=${encodeURIComponent(filters.category)}`);
+    if (filters.newsType) params.push(`newsType=${encodeURIComponent(filters.newsType)}`);
+    if (filters.priority) params.push(`priority=${encodeURIComponent(filters.priority)}`);
+    if (filters.district) params.push(`district=${encodeURIComponent(filters.district)}`);
+    
+    // Add pagination if needed (optional enhancement)
+    if (filters.page) params.push(`page=${filters.page}`);
+    if (filters.limit) params.push(`limit=${filters.limit}`);
+    
+    if (params.length > 0) {
+      queryString = `?${params.join('&')}`;
+    }
+    
+    const response = await apiClient.get(`/admin/news/published${queryString}`);
+    return response;
+  } catch (error) {
+    console.error("Get published news error:", error);
+    return error;
+  }
+},
+ // Forgot Password APIs
+  forgotPassword: async (email) => {
+    try {
+      // Note: API accepts username or email
+      const response = await apiClient.post('auth/forgot-password', { email });
+     
+      return response;
+    } catch (error) {
+      console.error('Forgot password error:', error);
+   return error;
+    }
+  },
+
+  verifyOTP: async (data) => {
+    try {
+      const response = await apiClient.post('auth/verify-otp', data);
+      return response;
+    } catch (error) {
+       return error;
+    }
+  },
+
+  resetPassword: async (data) => {
+    try {
+      const response = await apiClient.post('auth/reset-password', data);
+      
+      return response;
+    } catch (error) {
+       return error;
+    }
+  },
+
+  uploadNews: async (userId, formData) => {
+    try {
+      const response = await apiClient.post(
+        `admin/news/upload?userId=${userId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      console.log('Upload news response:', response);
+      return response;
+    } catch (error) {
+      console.error('Upload news error:', error);
+      return {
+        message: error.message || 'Failed to upload news',
+        error: true,
+        data: null
+      };
+    }
+  },
 };
 
 export default apiService;
