@@ -26,10 +26,11 @@ const AdminDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any>(null);
 const { user } = useAppContext();
+const roleId=(user.role==='REPORTER')?2:1
   console.log(user);
   const fetchData = async () => {
     try {
-      const data = await apiService.getDashboardStats({userId:user.userId,roleId:1});
+      const data = await apiService.getDashboardStats({userId:user.userId,roleId});
       setStats(data.data);
       console.log(data)
     } catch (err) {

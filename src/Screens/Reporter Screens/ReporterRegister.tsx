@@ -389,7 +389,7 @@ const ReporterRegistration = () => {
 
             {renderInput('Experience (years)', 'experience', 'e.g., 2', 'number-pad')}
 
-            <View style={styles.inputContainer}>
+            {/* <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Specialization</Text>
               <View style={styles.dropdownContainer}>
                 <TouchableOpacity
@@ -412,7 +412,7 @@ const ReporterRegistration = () => {
               <Text style={styles.hintText}>
                 Select your area of expertise (optional)
               </Text>
-            </View>
+            </View> */}
           </View>
 
           {/* Terms and Conditions */}

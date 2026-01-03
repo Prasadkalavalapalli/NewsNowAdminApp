@@ -136,7 +136,7 @@ const UploadScreen = () => {
   };
 
   // Direct fetch API function for uploading news
-  const uploadNewsDirect = async (userId, newsData, mediaFile = null) => {
+  const uploadNewsDirect = async (userId, newsData, mediaFile) => {
     try {
       // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('token');
@@ -161,7 +161,7 @@ const UploadScreen = () => {
       
       // Add media file if exists
       if (mediaFile) {
-        formData.append('file', {
+        formData.append('media', {
           uri: mediaFile.uri,
           type: mediaFile.type,
           name: mediaFile.name
@@ -169,7 +169,7 @@ const UploadScreen = () => {
       }
       // Make fetch request
       const response = await fetch(
-        `https://58b0155a457c.ngrok-free.app/api/admin/news/upload?userId=${userId}`,
+        `https://backend.newsvelugu.com/api/admin/news/upload?userId=${userId}`,
         {
           method: 'POST',
           headers: {
@@ -180,6 +180,8 @@ const UploadScreen = () => {
           body: formData,
         }
       );
+       console.log(mediaFile);
+        console.log(formData);
 
       // Check response status
       if (!response.ok) {

@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ==================== AXIOS CONFIGURATION ====================
 const apiClient = axios.create({
-  baseURL: 'https://tetrapterous-attributable-daniella.ngrok-free.dev/api/',
+  baseURL: 'https://backend.newsvelugu.com/api/',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -451,6 +451,7 @@ getPublishedNews: async (filters = {}) => {
     }
     
     const response = await apiClient.get(`/admin/news/published${queryString}`);
+    console.log(queryString)
     return response;
   } catch (error) {
     console.error("Get published news error:", error);

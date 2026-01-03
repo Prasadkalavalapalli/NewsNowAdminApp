@@ -15,7 +15,8 @@ import {
   Platform,
   Alert,
   Share,
-  Modal
+  Modal,
+  RefreshControl
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { pallette } from '../helpers/colors';
@@ -301,7 +302,7 @@ const NewsViewScreen = () => {
   const [selectedNewsType, setSelectedNewsType] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
   const [filterApplied, setFilterApplied] = useState(false);
-  
+    const [refreshing, setRefreshing] = useState(false);
   const { user } = useAppContext();
   const userId = user?.userId || 2;
 
@@ -309,7 +310,10 @@ const NewsViewScreen = () => {
   useEffect(() => {
     loadPublishedNews();
   }, []);
-
+const handleRefresh = () => {
+    setRefreshing(true);
+    loadPublishedNews();
+  };
   // Load data when current news changes
   useEffect(() => {
     if (currentNewsId) {
@@ -322,7 +326,7 @@ const NewsViewScreen = () => {
     try {
       setLoading(true);
       const response = await apiService.getPublishedNews(filters);
-      
+      console.log(filters);
       if (response.error === false) {
         setNewsList(response.data || []);
         initializeNewsStates(response.data || []);
@@ -331,6 +335,7 @@ const NewsViewScreen = () => {
         if (response.data?.length > 0) {
           await loadNewsData(response.data[0].id);
         }
+         setRefreshing(false);
       }
     } catch (error) {
       ErrorMessage.show('Failed to load news');
@@ -687,11 +692,44 @@ ${currentNews.content.length > 300 ? currentNews.content.substring(0, 300) + '..
   ));
 
   // News Item Component - memoized to prevent re-renders
-  const NewsItem = React.memo(({ item }) => (
+ const NewsItem = React.memo(({ item }) => {
+  const isVideo = item.mediaUrl?.includes('.mp4') || 
+                  item.mediaUrl?.includes('.mov') ||
+                  item.mediaType === 'video';
+
+  return (
     <View style={styles.newsContainer}>
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.mediaUrl || 'https://picsum.photos/400/300' }} style={styles.newsImage} />
-        <View style={styles.imageOverlay} />
+        <View style={styles.imageContainer}>
+        {isVideo ? (
+          // Video thumbnail with play icon
+          <>
+            <Image 
+              source={{ uri: item.thumbnailUrl || item.mediaUrl }} // Use thumbnail if available
+              style={styles.newsImage}
+              resizeMode="cover"
+            />
+            <View style={styles.imageOverlay} />
+            
+            <View style={styles.videoPlayButton}>
+              <Icon name="play" size={40} color={pallette.white} />
+            </View>
+            
+            <View style={styles.videoIndicator}>
+              <Icon name="video" size={14} color={pallette.white} />
+              <Text style={styles.videoIndicatorText}>VIDEO</Text>
+            </View>
+          </>
+        ) : (
+          // Normal image
+          <>
+            <Image 
+              source={{ uri: item.mediaUrl }} 
+              style={styles.newsImage}
+              resizeMode="cover"
+            />
+            <View style={styles.imageOverlay} />
+          </>
+        )}
         
        {/* <TouchableOpacity style={styles.filterButton} onPress={handleFilterPress}>
           <Icon name="filter" size={24} color={pallette.white} />
@@ -739,7 +777,7 @@ ${currentNews.content.length > 300 ? currentNews.content.substring(0, 300) + '..
       </View>
       <ActionBar newsId={item.id} />
     </View>
-  ));
+  )});
 
   if (loading) return <Loader />;
 
@@ -801,6 +839,14 @@ ${currentNews.content.length > 300 ? currentNews.content.substring(0, 300) + '..
           removeClippedSubviews={false}
           windowSize={5}
           maxToRenderPerBatch={3}
+           refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[pallette.primary]}
+                tintColor={pallette.primary}
+              />
+            }
         />
 
         <CommentsPanel 
@@ -1222,6 +1268,41 @@ const styles = StyleSheet.create({
     color: pallette.white,
     fontSize: 16,
     fontFamily: medium,
+  },
+   videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -30,
+    marginTop: -30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+
+  // Video Indicator
+  videoIndicator: {
+    position: 'absolute',
+    top: 40,
+    right: 80, // Adjust position to not overlap with category badge
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  videoIndicatorText: {
+    color: pallette.white,
+    fontSize: 10,
+    fontFamily: bold,
+    marginLeft: 4,
+    textTransform: 'uppercase',
   },
 });
 

@@ -33,7 +33,7 @@ const MainHeader = () => {
   };
 
   const handleLogoPress = () => {
-    navigation.navigate(HomeScreen);
+   
   };
 
   return (
