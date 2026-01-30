@@ -18,6 +18,8 @@ import UploadScreen from '../news/UploadScreen';
 import { Screen } from 'react-native-screens';
 import { AppContext, useAppContext } from '../../Store/contexts/app-context';
 import Loader from '../helpers/loader';
+import AdvertisementListScreen from '../ads/AdvertisementListScreen';
+
 
 
 const AdminDashboard = () => {
@@ -128,7 +130,7 @@ const todayStats = [
       value: stats?.totalNotifications || 0,
       icon: 'bell',
       color: '#00cec9',
-      onPress: () =>{},
+      onPress: () => navigation.navigate('AdvertisementList'),
     },
   ];
 
@@ -150,7 +152,7 @@ const todayStats = [
       title: 'Create Banner',
       icon: 'megaphone',
       // onPress: () => navigation.navigate('CreateBanner'),
-      onPress: () =>{},
+       onPress: () => navigation.navigate('AdvertisementList'),
       color: pallette.primary,
     },
     {

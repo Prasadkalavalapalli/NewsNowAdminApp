@@ -24,6 +24,9 @@ import UploadScreen from '../Screens/news/UploadScreen';
 import ProfileScreen from '../Screens/accounts/profile-screen';
 import VerifiedNewsScreen from '../Screens/news/verifiednews';
 import RejectedNewsScreen from '../Screens/news/rejectednews';
+import AdvertisementUploadScreen from '../Screens/ads/AdvertisementUploadScreen';
+import AdvertisementListScreen from '../Screens/ads/AdvertisementListScreen';
+import ReporterUpdate from '../Screens/Reporter Screens/ReporterUpdate';
 
 
 
@@ -61,7 +64,21 @@ const AdminHomeStack = () => (
       <Stack.Screen name='PrivacyPolicy'component={PrivacyPolicy}/>
        <Stack.Screen name='AboutNewsNow'component={AboutNewsNow}/>
        <Stack.Screen name='ProfileScreen'component={ProfileScreen}/>
-       
+       <Stack.Screen 
+  name="AdvertisementUpload" 
+  component={AdvertisementUploadScreen} 
+  
+/>
+<Stack.Screen 
+  name="AdvertisementList" 
+  component={AdvertisementListScreen} 
+ 
+/>
+<Stack.Screen 
+  name="ReporterUpdate" 
+  component={ReporterUpdate} 
+  options={{ headerShown: false }}
+/>
         {/* Add more admin screens here */}
   </Stack.Navigator>
 );

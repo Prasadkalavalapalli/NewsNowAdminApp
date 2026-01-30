@@ -214,7 +214,15 @@ export const apiService = {
       return error;
     }
   },
-
+ updateReporter : async (data) => {
+    try {
+      const response = await apiClient.put('/admin/update-reporter', data);
+      return response.data;
+    } catch (error) {
+      console.error('Update reporter error:', error);
+      throw error;
+    }
+  },
   updateReporterStatus: async (reporterId) => {
     try {
       const response = await apiClient.put(`admin/reporters/${reporterId}/toggle-status`);
@@ -510,6 +518,84 @@ getPublishedNews: async (filters = {}) => {
         error: true,
         data: null
       };
+    }
+  },
+  // Get all advertisements
+  getAllAdvertisements : async () => {
+    try {
+      const response = await apiClient.get('/admin/advertisements');
+      return response.data;
+    } catch (error) {
+      console.error('Get advertisements error:', error);
+      throw error;
+    }
+  },
+
+  // Get advertisement by ID
+  getAdvertisementById : async (advertisementId) => {
+    try {
+      const response = await apiClient.get(`/admin/advertisements/${advertisementId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get advertisement error:', error);
+      throw error;
+    }
+  },
+
+  // Create advertisement
+  createAdvertisement : async (data) => {
+    try {
+      const response = await apiClient.post('/admin/advertisements', data);
+      return response.data;
+    } catch (error) {
+      console.error('Create advertisement error:', error);
+      throw error;
+    }
+  },
+
+  // Update advertisement
+  updateAdvertisement : async (advertisementId, data) => {
+    try {
+      const response = await apiClient.put(`/admin/advertisements/${advertisementId}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Update advertisement error:', error);
+      throw error;
+    }
+  },
+  // Update advertisement status
+  updateAdvertisementStatus : async (advertisementId, isActive) => {
+    try {
+      const response = await apiClient.patch(`/admin/advertisements/${advertisementId}/status`, { isActive });
+      return response.data;
+    } catch (error) {
+      console.error('Update status error:', error);
+      throw error;
+    }
+  },
+  // Delete advertisement
+  deleteAdvertisement : async (advertisementId) => {
+    try {
+      const response = await apiClient.delete(`/admin/advertisements/${advertisementId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Delete advertisement error:', error);
+      throw error;
+    }
+  },
+
+  // Upload image
+  uploadImage : async (formData) => {
+    try {
+      const response = await apiClient.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Upload image error:', error);
+      throw error;
     }
   },
 };

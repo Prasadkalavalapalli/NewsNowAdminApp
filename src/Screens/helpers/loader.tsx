@@ -38,7 +38,7 @@ const Loader = () => {
           <Image
             source={require('../../Asserts/newsfulllogo.png')}
             style={styles.logo}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
       </View>
@@ -95,12 +95,13 @@ const styles = StyleSheet.create({
     backgroundColor: `${pallette.primary}40`,
   },
   logoContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,  // Changed from 70 to 80 for better circle
+    height: 80, // Changed from 150 to 80 for perfect circle
+    borderRadius: 40, // Half of width/height for perfect circle
     // backgroundColor: pallette.white,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden', // Added to make logo circular
     // shadowColor: pallette.black,
     // shadowOffset: {
     //   width: 0,
@@ -111,8 +112,9 @@ const styles = StyleSheet.create({
     // elevation: 3,
   },
   logo: {
-    width: 70,
-    height: 70,
+    width: 70,  // Slightly smaller than container
+    height: 70, // Slightly smaller than container
+    borderRadius: 33, // Half of width/height for perfect circle
   },
 });
 

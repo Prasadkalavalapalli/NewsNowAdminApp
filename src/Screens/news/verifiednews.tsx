@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { useNavigation } from '@react-navigation/native';
@@ -15,7 +16,6 @@ import { pallette } from '../helpers/colors';
 import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 import ErrorMessage from '../helpers/errormessage';
-import NewsDetails from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
 import Toast from 'react-native-toast-message';
 import { useAppContext } from '../../Store/contexts/app-context';
@@ -27,35 +27,31 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [verifiedNews, setVerifiedNews] = useState([]);
   const [error, setError] = useState(null);
- const {user}=useAppContext();
+  const { user } = useAppContext();
+
   // Fetch verified news
   const fetchVerifiedNews = async () => {
     try {
       setError(null);
     
-    // Get user ID from context/app state
-    const userId = user?.id || user?.userId; // Adjust based on your user object
-    
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
-    
-    // Build parameters according to your API endpoint
-    const params = {
-      userId: userId,
-      status: 'PUBLISHED',
-      ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-      ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-      page: 1,
-      limit: 20,
-    };
-      console.log('Fetching verified news:', params);
+      const userId = user?.id || user?.userId;
       
-     const response = await apiService.getAllNews(params);
-         console.log('API Response:', response);
-         
-         // Check response structure - adjust based on your actual API response
-         if (response.error === false) {
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      const params = {
+        userId: userId,
+        status: 'PUBLISHED',
+        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+        page: 1,
+        limit: 20,
+      };
+      
+      const response = await apiService.getAllNews(params);
+      
+      if (response.error === false) {
         setVerifiedNews(response.data.news || response.data || []);
       } else {
         throw new Error(response.message || 'Failed to fetch verified news');
@@ -64,11 +60,11 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       console.error('Fetch verified news error:', err);
       setError(err.message || 'Failed to load verified news');
       setVerifiedNews([]);
-       Toast.show({
-            type: 'error',
-            text1: 'Error',
-            text2: err.message || 'Failed to load news',
-          });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: err.message || 'Failed to load news',
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,16 +84,51 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
 
   // Handle news item press
   const handleNewsPress = (id) => {
-     navigation.navigate('NewsDetails', { newsId: id });
+    navigation.navigate('NewsDetails', { newsId: id });
   };
 
-  // Get time period label
-  const getTimePeriod = () => {
-    if (dateFilter.filter === 'today') return 'Today';
-    if (dateFilter.filter === '7days') return '7 Days';
-    if (dateFilter.filter === '30days') return '30 Days';
-    if (dateFilter.filter === 'custom') return 'Custom Period';
-    return '15 days'; // Default as shown in image
+  // Handle delete news
+  const handleDeleteNews = (newsItem) => {
+    Alert.alert(
+      'Delete News',
+      `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteNewsItem(newsItem.newsId)
+        },
+      ]
+    );
+  };
+
+  const deleteNewsItem = async (newsId) => {
+    try {
+      setLoading(true);
+      const response = await apiService.deleteNews(newsId);
+      
+      if (response.error === false) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'News deleted successfully'
+        });
+        
+        fetchVerifiedNews();
+      } else {
+        throw new Error(response.message || 'Failed to delete news');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to delete news'
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Format stats
@@ -122,37 +153,35 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
     );
   };
 
-  // Render stats row
+  // Render stats row with delete icon
   const renderStats = (item) => {
     return (
       <View style={styles.statsContainer}>
         {/* Replies */}
         <View style={styles.statItem}>
           <Icon name="comment" size={adjust(14)} color={pallette.grey} />
-          {/* <Text style={styles.statLabel}>Replies</Text> */}
           <Text style={styles.statValue}>{formatNumber(item.commentCount || 0)}</Text>
         </View>
         
         {/* Views */}
         <View style={styles.statItem}>
           <Icon name="eye" size={adjust(14)} color={pallette.grey} />
-          {/* <Text style={styles.statLabel}>Views</Text> */}
           <Text style={styles.statValue}>{formatNumber(item.saveCount || 0)}</Text>
         </View>
         
         {/* Reads */}
         <View style={styles.statItem}>
           <Icon name="heart" size={adjust(14)} color={pallette.grey} />
-          {/* <Text style={styles.statLabel}>Reads</Text> */}
-          <Text style={styles.statValue}>{formatNumber(item.likeCount|| 0)}</Text>
+          <Text style={styles.statValue}>{formatNumber(item.likeCount || 0)}</Text>
         </View>
         
         {/* Shares */}
         <View style={styles.statItem}>
           <Icon name="share-nodes" size={adjust(14)} color={pallette.grey} />
-          {/* <Text style={styles.statLabel}>Shares</Text> */}
           <Text style={styles.statValue}>{formatNumber(item.shareCount || 0)}</Text>
         </View>
+        
+       
       </View>
     );
   };
@@ -180,29 +209,32 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       {/* Categories */}
       {renderCategories(item.categories || [item.category] || ['Politics', 'Local News', 'Breaking News'])}
       
+       {/* Delete Icon */}
+        <TouchableOpacity
+          style={styles.deleteIconContainer}
+          onPress={(e) => {
+            e.stopPropagation();
+            handleDeleteNews(item);
+          }}
+          activeOpacity={0.7}
+        >
+          <Icon name="trash-can" size={adjust(16)} color={pallette.red} />
+        </TouchableOpacity>
       {/* Separator */}
-      <View style={styles.cardSeparator} />
+      {/* <View style={styles.cardSeparator} /> */}
     </TouchableOpacity>
   );
 
   if (loading && !refreshing) {
-    return (
-      <Loader/>
-    );
+    return <Loader />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      {/* <View style={styles.headerSection}>
-        <Text style={styles.headerTitle}>Recent Verified News</Text>
-      </View> */}
-
-      {/* News List */}
       <FlatList
         data={verifiedNews}
         renderItem={renderNewsItem}
-          keyExtractor={(item) => item.newsId || item.newsId.toString()}
+        keyExtractor={(item) => item.newsId || item.newsId.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -225,6 +257,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       />
       
       <ErrorMessage message={error} />
+      <Toast />
     </View>
   );
 };
@@ -233,35 +266,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: pallette.lightgrey,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: pallette.lightgrey,
-  },
-  headerSection: {
-    paddingHorizontal: w * 0.04,
-    paddingTop: h * 0.02,
-    paddingBottom: h * 0.01,
-    backgroundColor: pallette.white,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: adjust(18),
-    fontFamily: bold,
-    color: pallette.black,
-  },
-  headerPeriod: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.primary,
-    backgroundColor: `${pallette.primary}15`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
   },
   listContent: {
     paddingBottom: h * 0.02,
@@ -279,6 +283,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    position: 'relative',
   },
   newsTitle: {
     fontSize: adjust(16),
@@ -300,17 +305,11 @@ const styles = StyleSheet.create({
     paddingBottom: h * 0.01,
     borderBottomWidth: 1,
     borderBottomColor: pallette.lightgrey,
+    position: 'relative',
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
-  },
-  statLabel: {
-    fontSize: adjust(11),
-    fontFamily: medium,
-    color: pallette.grey,
-    marginTop: 2,
-    marginBottom: 2,
   },
   statValue: {
     fontSize: adjust(14),
@@ -321,7 +320,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    // marginTop: h * 0.01,
   },
   categoryTag: {
     backgroundColor: `${pallette.primary}10`,
@@ -338,6 +336,19 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: pallette.lightgrey,
     marginTop: h * 0.015,
+  },
+  // Delete icon styles
+  deleteIconContainer: {
+    position: 'absolute',
+    right: 20,
+    bottom:20,   width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: pallette.lightred,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: pallette.red,
   },
   emptyContainer: {
     flex: 1,

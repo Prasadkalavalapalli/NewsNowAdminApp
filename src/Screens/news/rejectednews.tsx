@@ -16,7 +16,6 @@ import { medium, bold } from '../helpers/fonts';
 import { h, w, adjust } from '../../constants/dimensions';
 
 import ErrorMessage from '../helpers/errormessage';
-import NewsDetails from '../news screen/newsdetail';
 import Loader from '../helpers/loader';
 import apiService from '../../Axios/Api';
 import { useAppContext } from '../../Store/contexts/app-context';
@@ -27,35 +26,33 @@ const RejectedNewsScreen = ({ dateFilter }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [rejectedNews, setRejectedNews] = useState([]);
   const [error, setError] = useState(null);
- const{user}=useAppContext();
+  const { user } = useAppContext();
+
   // Fetch rejected news
   const fetchRejectedNews = async () => {
     try {
       setError(null);
           
-          // Get user ID from context/app state
-          const userId = user?.id || user?.userId; // Adjust based on your user object
-          
-          if (!userId) {
-            throw new Error('User ID not found');
-          }
-          
-          // Build parameters according to your API endpoint
-          const params = {
-            userId: userId,
-            status: 'REJECTED',
-            ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-            ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-            page: 1,
-            limit: 20,
-          };
-            console.log('Fetching verified news:', params);
-            
-           const response = await apiService.getAllNews(params);
-               console.log('API Response:', response);
-               
-               // Check response structure - adjust based on your actual API response
-               if (response.error === false) {
+      // Get user ID from context/app state
+      const userId = user?.id || user?.userId;
+      
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      
+      // Build parameters according to your API endpoint
+      const params = {
+        userId: userId,
+        status: 'REJECTED',
+        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
+        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
+        page: 1,
+        limit: 20,
+      };
+      
+      const response = await apiService.getAllNews(params);
+      
+      if (response.error === false) {
         setRejectedNews(response.data.news || response.data || []);
       } else {
         throw new Error(response.message || 'Failed to fetch rejected news');
@@ -86,13 +83,12 @@ const RejectedNewsScreen = ({ dateFilter }) => {
     navigation.navigate('NewsDetails', { newsId: id });
   };
 
-  // Get time period label
-  const getTimePeriod = () => {
-    if (dateFilter.filter === 'today') return 'Today';
-    if (dateFilter.filter === '7days') return 'Last 7 Days';
-    if (dateFilter.filter === '30days') return 'Last month';
-    if (dateFilter.filter === 'custom') return 'Custom Period';
-    return 'last month';
+  // Handle edit icon press
+  const handleEditPress = (item) => {
+    navigation.navigate('EditPendingNews', {
+      mode: "APPROVE",
+      news: item
+    });
   };
 
   // Format rejection reason
@@ -132,13 +128,6 @@ const RejectedNewsScreen = ({ dateFilter }) => {
         {item.content || 'No description available'}
       </Text>
 
-      {/* Repeat description lines (as shown in image)
-      {[1, 2, 3].map((_, index) => (
-        <Text key={index} style={styles.repeatedDescription} numberOfLines={1}>
-          {item.title}
-        </Text>
-      ))} */}
-
       {/* Rejection Reason */}
       <View style={styles.rejectionContainer}>
         <Text style={styles.reasonLabel}>Reason : </Text>
@@ -150,23 +139,27 @@ const RejectedNewsScreen = ({ dateFilter }) => {
 
       {/* Separator */}
       <View style={styles.cardSeparator} />
+
+      {/* Edit Icon - Bottom Right */}
+      <TouchableOpacity
+        style={styles.editIconContainer}
+        onPress={(e) => {
+          e.stopPropagation(); // Prevent triggering the card press
+          handleEditPress(item);
+        }}
+        activeOpacity={0.7}
+      >
+        <Icon name="pen-to-square" size={18} color={pallette.primary} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   if (loading && !refreshing) {
-    return (
-      <Loader/>
-    );
+    return <Loader />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      {/* <View style={styles.headerSection}>
-        <Text style={styles.headerTitle}>Recent Rejected News</Text>
-        <Text style={styles.headerPeriod}>{getTimePeriod()}</Text>
-      </View> */}
-
       {/* News List */}
       <FlatList
         data={rejectedNews}
@@ -203,36 +196,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: pallette.lightgrey,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: pallette.lightgrey,
-  },
-  headerSection: {
-    paddingHorizontal: w * 0.04,
-    paddingTop: h * 0.02,
-    paddingBottom: h * 0.016,
-    backgroundColor: pallette.white,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
-  },
-  headerTitle: {
-    fontSize: adjust(18),
-    fontFamily: bold,
-    color: pallette.black,
-    marginBottom: h * 0.006,
-  },
-  headerPeriod: {
-    fontSize: adjust(14),
-    fontFamily: medium,
-    color: pallette.grey,
-  },
   listContent: {
     paddingBottom: h * 0.02,
   },
   newsCard: {
-     backgroundColor: pallette.white,
+    backgroundColor: pallette.white,
     marginHorizontal: w * 0.04,
     marginTop: h * 0.02,
     borderRadius: 8,
@@ -244,6 +212,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    position: 'relative', // Added for absolute positioning
   },
   newsTitle: {
     fontSize: adjust(16),
@@ -257,13 +226,6 @@ const styles = StyleSheet.create({
     color: pallette.grey,
     lineHeight: adjust(20),
     marginBottom: h * 0.008,
-  },
-  repeatedDescription: {
-    fontSize: adjust(13),
-    fontFamily: medium,
-    color: pallette.grey,
-    marginBottom: h * 0.004,
-    fontStyle: 'italic',
   },
   rejectionContainer: {
     flexDirection: 'row',
@@ -303,6 +265,20 @@ const styles = StyleSheet.create({
   },
   cardSeparator: {
     // Already using borderBottom on newsCard
+  },
+  // Edit Icon Styles
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${pallette.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: `${pallette.primary}30`,
   },
   emptyContainer: {
     flex: 1,

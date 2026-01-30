@@ -174,6 +174,10 @@ const { user } = useAppContext();
     return <Loader />;
   }
 
+  const handleEditPress = () => {
+    navigation.navigate('ReporterUpdate', { reporterId });
+  };
+
   if (!reporterId || !reporter) {
     return (
       <SafeAreaView style={styles.container}>
@@ -249,8 +253,17 @@ const { user } = useAppContext();
             tintColor={pallette.primary}
           />
         }
-        contentContainerStyle={styles.scrollContent}
-      >
+        contentContainerStyle={styles.scrollContent}>
+              {user?.role?.toLowerCase() === 'admin' && (
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={handleEditPress}
+            >
+              <Icon name="pen-to-square" size={18} color={pallette.white} />
+              <Text style={styles.editButtonText}>Edit Reporter</Text>
+            </TouchableOpacity>
+          )}
+  
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
@@ -571,6 +584,29 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: h * 0.03,
+  },
+  editButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: pallette.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+    shadowColor: pallette.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 1000,
+  },
+  editButtonText: {
+    color: pallette.white,
+    fontSize: adjust(14),
+    fontFamily: semibold,
   },
 });
 

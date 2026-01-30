@@ -240,7 +240,7 @@ const handlePhonePress = (phone): void => {
       </View></View>:null}
 
       {/* Separator */}
-      <View style={styles.cardSeparator} />
+      {/* <View style={styles.cardSeparator} /> */}
     </TouchableOpacity>
   );
 

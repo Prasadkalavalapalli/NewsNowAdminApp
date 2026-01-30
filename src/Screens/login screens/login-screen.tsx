@@ -115,14 +115,14 @@ const LoginScreen = () => {
         {/* Logo Section */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <Image 
+            {/* <Image 
               source={require('../../Asserts/newsfulllogo.png')}
               style={styles.logo}
               resizeMode="contain"
-            />
+            /> */}
           </View>
-          {/* <Text style={styles.appName}>News Now</Text>
-          <Text style={styles.tagline}>Stay Informed, Stay Ahead</Text> */}
+         <Text style={styles.appName}>News Now</Text>
+          <Text style={styles.tagline}>Stay Informed, Stay Ahead</Text>
         </View>
 
         {/* Login Form */}
@@ -272,14 +272,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: w * 0.06,
     paddingVertical: h * 0.02,
   },
-  logoSection: {
+ logoSection: {
     alignItems: 'center',
     marginTop: h * 0.02,
     marginBottom: h * 0.02,
   },
   logoContainer: {
     width: 100,
-    height: 100,
+    height: 80,
     borderRadius: 50,
     // backgroundColor: `${pallette.primary}10`,
     justifyContent: 'center',
