@@ -24,8 +24,6 @@ import Loader from '../helpers/loader';
 import Header from '../helpers/header';
 import ErrorMessage from '../helpers/errormessage';
 
-
-
 const AdvertisementListScreen = () => {
   const navigation = useNavigation();
 
@@ -36,14 +34,34 @@ const AdvertisementListScreen = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [filter, setFilter] = useState('all'); // all, active, inactive
+  const coordinates = { lat: '15.26', log: '80.04' };
 
   const loadAdvertisements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAllAdvertisements();
+      const response = await apiService.getAllAdvertisements(coordinates);
+      console.log('API Response:', response);
       
       if (response.error === false) {
-        setAdvertisements(response.data || []);
+        // Map API response to your component's expected structure
+        const mappedAds = (response.data || []).map(ad => ({
+          id: ad.id,
+          _id: ad.id,
+          title: ad.title || 'No Title',
+          description: ad.description || '',
+          imageUrl: ad.mediaUrl,
+          districts: ad.district ? [ad.district] : [],
+          startDate: ad.createdAt,
+          endDate: ad.endDate || ad.createdAt,
+          type: ad.type || 'ad',
+          active: ad.active,
+          isActive: ad.active,
+          createdAt: ad.createdAt,
+          // Add any other properties from API that might be useful
+          ...ad
+        }));
+        
+        setAdvertisements(mappedAds);
       } else {
         throw new Error(response.message || 'Failed to load advertisements');
       }
@@ -78,25 +96,15 @@ const AdvertisementListScreen = () => {
     });
   };
 
-  const handleDelete = (advertisement) => {
-    Alert.alert(
-      'Delete Advertisement',
-      `Are you sure you want to delete "${advertisement.title}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => deleteAdvertisement(advertisement.id || advertisement._id)
-        },
-      ]
-    );
+  const handleDelete = (id) => {
+   
+     deleteAdvertisement(id)
   };
 
-  const deleteAdvertisement = async (advertisementId) => {
+  const deleteAdvertisement = async (id) => {
     try {
       setLoading(true);
-      const response = await apiService.deleteAdvertisement(advertisementId);
+      const response = await apiService.deleteAdvertisement(id);
       
       if (response.error === false) {
         setToast({
@@ -120,7 +128,7 @@ const AdvertisementListScreen = () => {
   const handleToggleStatus = async (advertisement) => {
     try {
       setLoading(true);
-      const newStatus = !advertisement.isActive;
+      const newStatus = !advertisement.active;
       const response = await apiService.updateAdvertisementStatus(
         advertisement.id || advertisement._id,
         newStatus
@@ -146,8 +154,8 @@ const AdvertisementListScreen = () => {
   };
 
   const filteredAdvertisements = advertisements.filter(ad => {
-    if (filter === 'active') return ad.isActive === true;
-    if (filter === 'inactive') return ad.isActive === false;
+    if (filter === 'active') return ad.active === true;
+    if (filter === 'inactive') return ad.active === false;
     return true;
   });
 
@@ -155,6 +163,7 @@ const AdvertisementListScreen = () => {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
       return date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
@@ -166,14 +175,18 @@ const AdvertisementListScreen = () => {
   };
 
   const getDistrictsText = (districts) => {
-    if (!districts || districts.length === 0) return 'All Districts';
-    if (districts.includes('All Districts')) return 'All Districts';
+    if (!Array.isArray(districts) || districts.length === 0) {
+      return 'All Districts';
+    }
+    if (districts[0] === 'All Districts' || districts.includes('All Districts')) {
+      return 'All Districts';
+    }
     if (districts.length <= 2) return districts.join(', ');
     return `${districts.length} districts`;
   };
 
   const AdvertisementCard = ({ advertisement }) => (
-    <View style={[styles.adCard, !advertisement.isActive && styles.inactiveCard]}>
+    <View style={[styles.adCard, !advertisement.active && styles.inactiveCard]}>
       <View style={styles.adHeader}>
         <View style={styles.adImageContainer}>
           {advertisement.imageUrl ? (
@@ -189,10 +202,10 @@ const AdvertisementListScreen = () => {
           <View style={styles.adStatusRow}>
             <View style={[
               styles.statusBadge,
-              { backgroundColor: advertisement.isActive ? pallette.green : pallette.red }
+              { backgroundColor: advertisement.active ? pallette.green : pallette.red }
             ]}>
               <Text style={styles.statusText}>
-                {advertisement.isActive ? 'Active' : 'Inactive'}
+                {advertisement.active ? 'Active' : 'Inactive'}
               </Text>
             </View>
             
@@ -209,7 +222,7 @@ const AdvertisementListScreen = () => {
             <View style={styles.metaItem}>
               <Icon name="calendar" size={12} color={pallette.grey} />
               <Text style={styles.metaText}>
-                {formatDate(advertisement.startDate)} - {formatDate(advertisement.endDate)}
+                Created: {formatDate(advertisement.createdAt)}
               </Text>
             </View>
             
@@ -233,12 +246,12 @@ const AdvertisementListScreen = () => {
           onPress={() => handleToggleStatus(advertisement)}
         >
           <Icon 
-            name={advertisement.isActive ? 'eye-slash' : 'eye'} 
+            name={advertisement.active ? 'eye-slash' : 'eye'} 
             size={14} 
             color={pallette.white} 
           />
           <Text style={styles.actionButtonText}>
-            {advertisement.isActive ? 'Deactivate' : 'Activate'}
+            {advertisement.active ? 'Deactivate' : 'Activate'}
           </Text>
         </TouchableOpacity>
         
@@ -252,7 +265,7 @@ const AdvertisementListScreen = () => {
         
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDelete(advertisement)}
+          onPress={() => handleDelete(advertisement.id)}
         >
           <Icon name="trash" size={14} color={pallette.white} />
           <Text style={styles.actionButtonText}>Delete</Text>
@@ -315,14 +328,14 @@ const AdvertisementListScreen = () => {
           
           <View style={styles.statsCard}>
             <Text style={styles.statsNumber}>
-              {advertisements.filter(ad => ad.isActive).length}
+              {advertisements.filter(ad => ad.active).length}
             </Text>
             <Text style={styles.statsLabel}>Active</Text>
           </View>
           
           <View style={styles.statsCard}>
             <Text style={styles.statsNumber}>
-              {advertisements.filter(ad => !ad.isActive).length}
+              {advertisements.filter(ad => !ad.active).length}
             </Text>
             <Text style={styles.statsLabel}>Inactive</Text>
           </View>

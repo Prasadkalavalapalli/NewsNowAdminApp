@@ -22,6 +22,7 @@ apiClient.interceptors.request.use(
     } catch (error) {
       console.error('Error getting token:', error);
     }
+    console.log('request',config)
     return config;
   },
   (error) => {
@@ -46,7 +47,7 @@ apiClient.interceptors.response.use(
         return response.data;
       }
     }
-    
+    console.log('respone',standardizedResponse)
     return standardizedResponse;
   },
   async (error) => {
@@ -187,9 +188,9 @@ export const apiService = {
     }
   },
 
-  deleteNews: async (newsId) => {
+  deleteNews: async (newsId,adminId) => {
     try {
-      const response = await apiClient.delete(`/admin/news/${newsId}`);
+      const response = await apiClient.delete(`/admin/news/delete/${newsId}?adminId=${adminId}`);
       return response;
     } catch (error) {
       return error;
@@ -214,10 +215,11 @@ export const apiService = {
       return error;
     }
   },
- updateReporter : async (data) => {
+ updateReporter : async (updateData) => {
     try {
-      const response = await apiClient.put('/admin/update-reporter', data);
-      return response.data;
+     
+      const response = await apiClient.put( `/admin/reporters/update-profile?userId=${updateData.reporterId}`,updateData);
+      return response;
     } catch (error) {
       console.error('Update reporter error:', error);
       throw error;
@@ -521,15 +523,27 @@ getPublishedNews: async (filters = {}) => {
     }
   },
   // Get all advertisements
-  getAllAdvertisements : async () => {
+  getAllAdvertisements : async (coordinates) => {
     try {
-      const response = await apiClient.get('/admin/advertisements');
-      return response.data;
+      console.log(coordinates.lat)
+      const response = await apiClient.get(`ads/feed?latitude=${coordinates.lat}&longitude=${coordinates.log}&local=true`);
+      return response;
     } catch (error) {
       console.error('Get advertisements error:', error);
       throw error;
     }
   },
+  // Delete advertisement
+  deleteAdvertisement : async (advertisementId) => {
+    try {
+      const response = await apiClient.delete(`/ads/${advertisementId}`);
+      return response;
+    } catch (error) {
+      console.error('Delete advertisement error:', error);
+      throw error;
+    }
+  },
+  
 
   // Get advertisement by ID
   getAdvertisementById : async (advertisementId) => {
@@ -573,16 +587,7 @@ getPublishedNews: async (filters = {}) => {
       throw error;
     }
   },
-  // Delete advertisement
-  deleteAdvertisement : async (advertisementId) => {
-    try {
-      const response = await apiClient.delete(`/admin/advertisements/${advertisementId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Delete advertisement error:', error);
-      throw error;
-    }
-  },
+  
 
   // Upload image
   uploadImage : async (formData) => {

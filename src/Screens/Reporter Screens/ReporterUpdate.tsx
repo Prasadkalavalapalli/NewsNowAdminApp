@@ -102,7 +102,7 @@ const ReporterUpdate = () => {
     try {
       setLoading(true);
       const response = await apiService.getReporterById(reporterId, 2);
-      
+      console.log(response.data);
       if (response.error === false) {
         const reporter = response.data;
         
@@ -159,7 +159,7 @@ const ReporterUpdate = () => {
     if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.mobileNumber.trim()) newErrors.mobileNumber = 'Phone number is required';
-    if (!formData.idProofNumber.trim()) newErrors.idProofNumber = 'ID Proof number is required';
+    // if (!formData.idProofNumber.trim()) newErrors.idProofNumber = 'ID Proof number is required';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -173,13 +173,13 @@ const ReporterUpdate = () => {
       newErrors.mobileNumber = 'Please enter a valid 10-digit Indian phone number';
     }
 
-    // ID Proof validation based on type
-    if (formData.idProofType === 'aadhar' && formData.idProofNumber.length !== 12) {
-      newErrors.idProofNumber = 'Aadhar number must be 12 digits';
-    }
-    if (formData.idProofType === 'pan' && formData.idProofNumber.length !== 10) {
-      newErrors.idProofNumber = 'PAN number must be 10 characters';
-    }
+    // // ID Proof validation based on type
+    // if (formData.idProofType === 'aadhar' && formData.idProofNumber.length !== 12) {
+    //   newErrors.idProofNumber = 'Aadhar number must be 12 digits';
+    // }
+    // if (formData.idProofType === 'pan' && formData.idProofNumber.length !== 10) {
+    //   newErrors.idProofNumber = 'PAN number must be 10 characters';
+    // }
 
     // Pincode validation (optional)
     if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) {
@@ -561,14 +561,14 @@ const ReporterUpdate = () => {
 
           {/* Action Buttons */}
           <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.changePasswordButton}
               onPress={() => setShowPasswordModal(true)}
               disabled={updating}
             >
               <Icon name="key" size={16} color={pallette.primary} />
               <Text style={styles.changePasswordText}>Change Password</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               style={[styles.updateButton, (!hasChanges() || updating) && styles.updateButtonDisabled]}

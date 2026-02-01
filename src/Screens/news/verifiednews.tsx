@@ -89,24 +89,26 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
 
   // Handle delete news
   const handleDeleteNews = (newsItem) => {
-    Alert.alert(
-      'Delete News',
-      `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => deleteNewsItem(newsItem.newsId)
-        },
-      ]
-    );
+  //   Alert.alert(
+  //     'Delete News',
+  //     `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { 
+  //         text: 'Delete', 
+  //         style: 'destructive',
+  //         onPress: () => deleteNewsItem(newsItem.newsId)
+  //       },
+  //     ]
+  deleteNewsItem(newsItem.newsId)
+  //   );
   };
 
   const deleteNewsItem = async (newsId) => {
     try {
+      const userId = user?.id || user?.userId;
       setLoading(true);
-      const response = await apiService.deleteNews(newsId);
+      const response = await apiService.deleteNews(newsId, userId);
       
       if (response.error === false) {
         Toast.show({

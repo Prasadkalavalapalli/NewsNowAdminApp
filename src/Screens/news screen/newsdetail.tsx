@@ -270,9 +270,12 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
       <SafeAreaView style={styles.container}>
         <Header
           onback={() => navigation.goBack()}
-          hastitle={true}
           title={'News Details'}
-        />
+          hastitle={true}
+          active={1}
+          onSkip={() => {}}
+          skippable={false}
+            />
         <View style={styles.errorContainer}>
           <Icon name="newspaper" size={adjust(60)} color={pallette.lightgrey} />
           <Text style={styles.errorText}>News not found</Text>
@@ -305,9 +308,12 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
 
       {/* Header */}
       <Header
-        onback={() => navigation.goBack()}
-        hastitle={true}
-        title={'News Details'}
+       onback={() => navigation.goBack()}
+          title={'News Details'}
+          hastitle={true}
+          active={1}
+          onSkip={() => {}}
+          skippable={false}
       />
 
       <ScrollView 
