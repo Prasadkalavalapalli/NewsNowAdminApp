@@ -153,6 +153,15 @@ export const apiService = {
       return error;
     }
   },
+  getBannerStats: async (data) => {
+    try {
+      const response = await apiClient.get(`/ads/adscount`)
+      console.log(response)
+       return response;
+    } catch (error) {
+      return error;
+    }
+  },
 
   // ===== NEWS MANAGEMENT =====
 
@@ -526,7 +535,7 @@ getPublishedNews: async (filters = {}) => {
   getAllAdvertisements : async (coordinates) => {
     try {
       console.log(coordinates.lat)
-      const response = await apiClient.get(`ads/feed?latitude=${coordinates.lat}&longitude=${coordinates.log}&local=true`);
+      const response = await apiClient.get(`/ads/feed?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}&local=true`);
       return response;
     } catch (error) {
       console.error('Get advertisements error:', error);

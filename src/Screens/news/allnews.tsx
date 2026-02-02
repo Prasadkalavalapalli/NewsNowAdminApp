@@ -97,7 +97,7 @@ const AllNewsScreen = ({ dateFilter }) => {
   // Format time
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { 
+    return date.toLocaleDateString([], { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false 
@@ -116,7 +116,7 @@ const AllNewsScreen = ({ dateFilter }) => {
           {item.headline}
         </Text>
         <Text style={styles.newsTime}>
-          {formatTime(item.createdAt || item.date)||'--'}
+          {formatTime(item.uploadedAt || item.date)||'--'}
         </Text>
       </View>
       <Text style={styles.newsDescription} numberOfLines={3}>

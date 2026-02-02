@@ -89,19 +89,19 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
 
   // Handle delete news
   const handleDeleteNews = (newsItem) => {
-  //   Alert.alert(
-  //     'Delete News',
-  //     `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
-  //     [
-  //       { text: 'Cancel', style: 'cancel' },
-  //       { 
-  //         text: 'Delete', 
-  //         style: 'destructive',
-  //         onPress: () => deleteNewsItem(newsItem.newsId)
-  //       },
-  //     ]
-  deleteNewsItem(newsItem.newsId)
-  //   );
+    Alert.alert(
+      'Delete News',
+      `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteNewsItem(newsItem.newsId)
+        },
+      ]
+
+    );
   };
 
   const deleteNewsItem = async (newsId) => {
@@ -211,6 +211,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       {/* Categories */}
       {renderCategories(item.categories || [item.category] || ['Politics', 'Local News', 'Breaking News'])}
       
+         {user?.role?.toLocaleLowerCase()==='admin'?<View>
        {/* Delete Icon */}
         <TouchableOpacity
           style={styles.deleteIconContainer}
@@ -221,7 +222,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
           activeOpacity={0.7}
         >
           <Icon name="trash-can" size={adjust(16)} color={pallette.red} />
-        </TouchableOpacity>
+        </TouchableOpacity></View>:null}
       {/* Separator */}
       {/* <View style={styles.cardSeparator} /> */}
     </TouchableOpacity>
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
   deleteIconContainer: {
     position: 'absolute',
     right: 20,
-    bottom:20,   width: 32,
+    bottom:10,   width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: pallette.lightred,

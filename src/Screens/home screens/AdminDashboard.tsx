@@ -27,6 +27,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any>(null);
+  const  [banner,SetBanner]=useState();
 const { user } = useAppContext();
 const roleId=(user.role==='REPORTER')?2:1
   console.log(user);
@@ -34,7 +35,9 @@ const roleId=(user.role==='REPORTER')?2:1
     try {
       const data = await apiService.getDashboardStats({userId:user.userId,roleId});
       setStats(data.data);
-      console.log(data)
+      const res = await apiService.getBannerStats();
+      SetBanner(res.data);
+      console.log(res.data)
     } catch (err) {
       console.error('Error:', err);
     } finally {
@@ -120,14 +123,14 @@ const todayStats = [
   const actionCards = [
     {
       title: 'Reporters',
-      value: stats?.total['Reporter Management'] || 0,
+      value: getTotalStat("Reporter Count") || 0,
       icon: 'users',
       color: '#6c5ce7',
       onPress: () => navigation.navigate('ReporterList'),
     },
     {
-      title: 'Notifications',
-      value: stats?.totalNotifications || 0,
+      title: 'Banners',
+      value: banner?.totalCount || 0,
       icon: 'bell',
       color: '#00cec9',
       onPress: () => navigation.navigate('AdvertisementList'),
@@ -150,7 +153,7 @@ const todayStats = [
     },
     {
       title: 'Create Banner',
-      icon: 'megaphone',
+      icon: 'bell',
       // onPress: () => navigation.navigate('CreateBanner'),
        onPress: () => navigation.navigate('AdvertisementList'),
       color: pallette.primary,

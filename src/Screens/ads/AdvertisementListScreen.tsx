@@ -23,9 +23,11 @@ import apiService from '../../Axios/Api';
 import Loader from '../helpers/loader';
 import Header from '../helpers/header';
 import ErrorMessage from '../helpers/errormessage';
+import { useLocation } from '../news screen/location/LocationContext';
 
 const AdvertisementListScreen = () => {
   const navigation = useNavigation();
+
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,8 +36,10 @@ const AdvertisementListScreen = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [filter, setFilter] = useState('all'); // all, active, inactive
-  const coordinates = { lat: '15.26', log: '80.04' };
-
+  // const coordinates = { lat: '15.26', log: '80.04' };
+  const {coordinates}=useLocation();
+ 
+  console.log(coordinates);
   const loadAdvertisements = useCallback(async () => {
     try {
       setLoading(true);

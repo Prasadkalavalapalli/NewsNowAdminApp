@@ -11,12 +11,12 @@ const App = () => {
   return (
     <Provider store={store}>
       
-      {/* <LocationProvider> */}
+      <LocationProvider>
         <AppProvider>
           <AppNavigator />
           <Toast />
         </AppProvider>
-      {/* </LocationProvider> */}
+      </LocationProvider>
     </Provider>
   );
 };
