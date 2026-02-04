@@ -24,13 +24,14 @@ import Toast from "react-native-toast-message";
  * Company contact information constants
  */
 const COMPANY_CONTACT = {
-  email: "newsnow@gamil.com",
-  phone: "+91 9876543210",
-  formattedPhone: "+91 9876543210",
-  website: "https://newsnow.com/privacy",
-  dpoEmail: "newsnow@gamil.com",
-  address: "News Now Headquarters, Mumbai, India"
+  email: "newsnowhelpdesk@gmail.com",
+  phone: "+91 9494750137",
+  formattedPhone: "+91 9494750137",
+  website: "https://newsvelugu.com",
+  dpoEmail: "newsnowhelpdesk@gmail.com",
+  address: "PENDEKAL RS POST,TUGGALI MANDAL , KURNOOL DISTRICT, ANDHRA PRADESH"
 };
+
 
 /**
  * App version information
@@ -437,16 +438,19 @@ const styles = StyleSheet.create({
     borderBottomColor: pallette.lightgrey,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: h * 0.015,
+    width: 70,  // Make it circular (same width and height)
+    height:70, // Make it circular (same width and height)
+    borderRadius: 30, // Half to make perfect circle
+    backgroundColor: pallette.white, // Optional: add background if needed
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden', // Important: makes logo stay within circle
+    borderWidth: 3, // Optional: border for visual effect
+    borderColor: '#990000'
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
   },
   channelName: {
     fontSize: adjust(24),

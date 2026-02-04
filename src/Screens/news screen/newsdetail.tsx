@@ -469,7 +469,7 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
 
         {/* Action Buttons */}
         <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+          <TouchableOpacity style={styles.actionButton}>
             <Icon 
               name="heart" 
               size={22} 
@@ -488,7 +488,7 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+          <TouchableOpacity style={styles.actionButton} >
             <Icon name="share" size={22} color={pallette.darkgrey} />
             <Text style={styles.actionCount}>
               {formatNumber(sharesCount)}
@@ -512,7 +512,7 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
           
           {/* Add Comment */}
           <View style={styles.addCommentContainer}>
-            <View style={styles.commentInputContainer}>
+            {/* <View style={styles.commentInputContainer}>
               <TextInput
                 style={styles.commentInput}
                 value={commentText}
@@ -536,7 +536,7 @@ ${news.content && news.content.length > 300 ? news.content.substring(0, 300) + '
                   <Icon name="paper-plane" size={16} color={pallette.white} />
                 )}
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
           
           {/* Comments List */}

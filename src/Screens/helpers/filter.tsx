@@ -33,7 +33,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
   showLabel = true,
   buttonStyle,
   buttonText = 'Filter',
-  initialFilter = '7days',
+  initialFilter = 'all',
 }) => {
   const [showFilter, setShowFilter] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState(initialFilter);
@@ -100,6 +100,7 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({
       startDate: start,
       endDate: end,
     });
+    console.log()
     setShowFilter(false);
     setShowDateInput(false);
   };

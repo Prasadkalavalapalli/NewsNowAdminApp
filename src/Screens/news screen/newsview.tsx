@@ -459,7 +459,6 @@
 
 
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -483,24 +482,23 @@ import ErrorMessage from '../helpers/errormessage';
 import NewsItem from '../news screen/news/NewsItem';
 import CommentsPanel from '../news screen/news/CommentsPanel';
 import FilterModal from '../news screen/filter/FilterModal';
-// import { useLocation } from '../news screen/location/LocationContext';
-import AdvertisementComponent from '../news screen/news/AdvertisementBanner'; // Make sure this path is correct
+import AdvertisementComponent from '../news screen/news/AdvertisementBanner';
+import { useLocation } from './location/LocationContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const NewsViewScreen = () => {
   const flatListRef = useRef(null);
-  // const { displayLocation, fullLocation, error: locationError, refreshLocation } = useLocation();
- const fullLocation='hyderabad';
- const locationError=false
+  const { coordinates } = useLocation();
+  
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showComments, setShowComments] = useState(false);
   const [newsList, setNewsList] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [currentVideoId, setCurrentVideoId] = useState(null);
-    // Add this with your other useState declarations
-    const [combinedData, setCombinedData] = useState([]);
+  const [combinedData, setCombinedData] = useState([]);
+  
   // Filter state
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -508,65 +506,20 @@ const NewsViewScreen = () => {
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [districts, setDistricts] = useState([]);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-const [refreshActionBar, setRefreshActionBar] = useState(0);
-  // Advertisement state
-  const [showAdAfterIndex, setShowAdAfterIndex] = useState(null);
-  const [lastAdIndex, setLastAdIndex] = useState(-1);
+  const [refreshActionBar, setRefreshActionBar] = useState(0);
 
   // Load districts list
   useEffect(() => {
-   loadLocations();
+    loadLocations();
   }, []);
 
-  // Load news immediately on component mount
-useEffect(() => {
-  console.log('Loading initial news...');
-  loadPublishedNews();
-}, []); // Empty dependency array - runs once on mount
-
-// When location becomes available, you can optionally update
-useEffect(() => {
-  if (fullLocation && fullLocation !== 'Fetching...' && fullLocation !== 'Permission denied') {
-    console.log('Location available:', fullLocation);
-    // Optional: Reload with location if you want
-    // loadPublishedNews({ district: fullLocation });
-  }
-}, [fullLocation]);
-
-
-  /// Add this useEffect to combine news with ads
-useEffect(() => {
-  if (newsList.length > 0) {
-    const combined = [];
-    let adCount = 0;
-    
-    for (let i = 0; i < newsList.length; i++) {
-      // Add news item
-      combined.push({
-        type: 'news',
-        data: newsList[i],
-        id: `news_${newsList[i].id}`
-      });
-      
-      // Insert ad after every 5 news items (after 5th, 10th, 15th, etc.)
-      if ((i + 1) % 3 === 0) {
-        adCount++;
-        combined.push({
-          type: 'ad',
-          data: { 
-            id: adCount,
-            adIndex: adCount - 1 // For rotating through ads
-          },
-          id: `ad_${adCount}`
-        });
-      }
+  // Load news when coordinates are available or when filters change
+  useEffect(() => {
+    if (coordinates?.latitude && coordinates?.longitude) {
+      console.log('Loading news with coordinates:', coordinates);
+      loadPublishedNews();
     }
-    
-    setCombinedData(combined);
-    console.log(`Created ${combined.length} items (${newsList.length} news + ${adCount} ads)`);
-  }
-}, [newsList]);
+  }, [coordinates, selectedCategory, selectedNewsType, selectedPriority, selectedDistrict]);
 
   const loadLocations = async () => {
     try {
@@ -640,37 +593,66 @@ useEffect(() => {
     }
   };
 
+  // Combine news with ads
+  useEffect(() => {
+    if (newsList.length > 0) {
+      const combined = [];
+      let adCount = 0;
+      
+      for (let i = 0; i < newsList.length; i++) {
+        combined.push({
+          type: 'news',
+          data: newsList[i],
+          id: `news_${newsList[i].id}`
+        });
+        
+        if ((i + 1) % 3 === 0) {
+          adCount++;
+          combined.push({
+            type: 'ad',
+            data: { 
+              id: adCount,
+              adIndex: adCount - 1
+            },
+            id: `ad_${adCount}`
+          });
+        }
+      }
+      
+      setCombinedData(combined);
+    }
+  }, [newsList]);
+
   // Load news with API call
   const loadPublishedNews = async (customFilters = {}) => {
     try {
       setLoading(true);
       
-      // Build query parameters according to API
+      // Build query parameters
       const queryParams = {};
       
-      // Determine which district to use (priority order):
-      // 1. Custom filters from applyFilters/clearFilters
-      // 2. Selected district from filter modal
-      // 3. User's current location district
-      if (customFilters.district) {
-        queryParams.district = customFilters.district;
-      } else if (selectedDistrict) {
-        queryParams.district = selectedDistrict;
-      } else if (fullLocation && fullLocation !== 'Fetching...' && fullLocation !== 'Permission denied') {
-        queryParams.district = fullLocation;
+      // PRIORITY 1: If district is selected, use district ONLY (no coordinates)
+      if (selectedDistrict || customFilters.district) {
+        const districtToUse = customFilters.district || selectedDistrict;
+        queryParams.district = districtToUse;
+        console.log('Using district filter:', districtToUse);
       }
-      // If no district, API will return all news (no district parameter)
+      // PRIORITY 2: If no district selected, use coordinates
+      else if (coordinates?.latitude && coordinates?.longitude) {
+        queryParams.latitude = coordinates.latitude;
+        queryParams.longitude = coordinates.longitude;
+        console.log('Using coordinates:', coordinates);
+      }
+      // PRIORITY 3: If no district and no coordinates, API will return all news
       
-      // Add other filters from custom filters or selected state
-      if (customFilters.category || selectedCategory) {
-        queryParams.category = customFilters.category || selectedCategory;
-      }
-      if (customFilters.newsType || selectedNewsType) {
-        queryParams.newsType = customFilters.newsType || selectedNewsType;
-      }
-      if (customFilters.priority || selectedPriority) {
-        queryParams.priority = customFilters.priority || selectedPriority;
-      }
+      // Add other filters
+      const category = customFilters.category || selectedCategory;
+      const newsType = customFilters.newsType || selectedNewsType;
+      const priority = customFilters.priority || selectedPriority;
+      
+      if (category) queryParams.category = category;
+      if (newsType) queryParams.newsType = newsType;
+      if (priority) queryParams.priority = priority;
       
       console.log('API Call with params:', queryParams);
       
@@ -694,17 +676,7 @@ useEffect(() => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    try {
-      console.log('refresh hitted');
-      // Refresh location
-      // await refreshLocation();
-      // Then reload news with current filters
-      await loadPublishedNews();
-    } catch (err) {
-      console.error('Refresh error:', err);
-      // If refresh fails, still reload news
-      await loadPublishedNews();
-    }
+    await loadPublishedNews();
   };
 
   const formatTime = useCallback((timestamp) => {
@@ -735,51 +707,41 @@ useEffect(() => {
     setCurrentVideoId(null);
   }, []);
 
-  // Render each item in FlatList with ads
-// Replace your renderItem function with this:
-const renderItem = useCallback(({ item }) => {
-  if (item.type === 'news') {
-    return (
-      <View style={styles.newsItemContainer}>
-        <NewsItem 
-          item={item.data}
-          formatTime={formatTime}
-          onFilterPress={() => setShowFilterModal(true)}
-          onCommentPress={() => setShowComments(prev => !prev)}
-          onVideoPlayback={() => setCurrentVideoId(prev => prev === item.data.id ? null : item.data.id)}
-          isVideoPlaying={currentVideoId === item.data.id}
-          currentNewsId={item.data.id}
-          showComments={showComments}
-          refreshActionBar={refreshActionBar} // Add this prop
-        />
-      </View>
-    );
-  } else if (item.type === 'ad') {
-    return (
-      <View style={styles.newsItemContainer}>
-        <AdvertisementComponent
-          adNumber={item.data.id}
-          adIndex={item.data.adIndex}
-        />
-      </View>
-    );
-  }
-}, [formatTime, currentVideoId, showComments,refreshActionBar]);
+  const renderItem = useCallback(({ item }) => {
+    if (item.type === 'news') {
+      return (
+        <View style={styles.newsItemContainer}>
+          <NewsItem 
+            item={item.data}
+            formatTime={formatTime}
+            onFilterPress={() => setShowFilterModal(true)}
+            onCommentPress={() => setShowComments(prev => !prev)}
+            onVideoPlayback={() => setCurrentVideoId(prev => prev === item.data.id ? null : item.data.id)}
+            isVideoPlaying={currentVideoId === item.data.id}
+            currentNewsId={item.data.id}
+            showComments={showComments}
+            refreshActionBar={refreshActionBar}
+          />
+        </View>
+      );
+    } else if (item.type === 'ad') {
+      return (
+        <View style={styles.newsItemContainer}>
+          <AdvertisementComponent
+            adNumber={item.data.id}
+            adIndex={item.data.adIndex}
+          />
+        </View>
+      );
+    }
+  }, [formatTime, currentVideoId, showComments, refreshActionBar]);
+
   const applyFilters = useCallback(async () => {
     try {
       const filters = {};
       
-      // Pass district if selected
-      if (selectedDistrict) {
-        filters.district = selectedDistrict;
-        console.log('Applying filters with district:', selectedDistrict);
-      } else if (fullLocation && fullLocation !== 'Fetching...') {
-        // If no district selected, use user's current district
-        filters.district = fullLocation;
-        console.log('Applying filters with user district:', fullLocation);
-      }
-      
-      // Pass other filters
+      // Pass selected filters
+      if (selectedDistrict) filters.district = selectedDistrict;
       if (selectedCategory) filters.category = selectedCategory;
       if (selectedNewsType) filters.newsType = selectedNewsType;
       if (selectedPriority) filters.priority = selectedPriority;
@@ -788,13 +750,11 @@ const renderItem = useCallback(({ item }) => {
       setShowFilterModal(false);
       setCurrentIndex(0);
       setCurrentVideoId(null);
-      setShowAdAfterIndex(null); // Reset ad display
-      setLastAdIndex(-1); // Reset last ad index
     } catch (error) {
       console.error('Apply filters error:', error);
       ErrorMessage.show('Failed to apply filters');
     }
-  }, [selectedCategory, selectedNewsType, selectedPriority, selectedDistrict, fullLocation]);
+  }, [selectedCategory, selectedNewsType, selectedPriority, selectedDistrict]);
 
   const clearFilters = useCallback(async () => {
     setSelectedCategory('');
@@ -802,18 +762,10 @@ const renderItem = useCallback(({ item }) => {
     setSelectedPriority('');
     setSelectedDistrict('');
     
-    // Load news with user's current district or all news
-    const filters = {};
-    if (fullLocation && fullLocation !== 'Fetching...') {
-      filters.district = fullLocation;
-    }
-    
-    await loadPublishedNews(filters);
+    await loadPublishedNews();
     setShowFilterModal(false);
     setCurrentVideoId(null);
-    setShowAdAfterIndex(null); // Reset ad display
-    setLastAdIndex(-1); // Reset last ad index
-  }, [fullLocation]);
+  }, []);
 
   const handleCommentPress = useCallback((newsId) => {
     setShowComments(prev => !prev);
@@ -826,33 +778,45 @@ const renderItem = useCallback(({ item }) => {
   const currentNews = newsList[currentIndex] || {};
   const currentNewsId = currentNews.id;
 
-  // Show loading if initial load is not complete
+  // Show loading
   if (loading && !refreshing) return <Loader />;
 
-  // Show location error if location fails and no news loaded
-  if (locationError) {
+  // Check if we have coordinates or district
+  const hasLocationData = coordinates?.latitude && coordinates?.longitude;
+  const hasDistrict = selectedDistrict;
+  
+  // Show message if no location data and no news
+  if (!hasLocationData && !hasDistrict && newsList.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={pallette.black} />
         <View style={styles.emptyContainer}>
           <Icon name="location-crosshairs" size={60} color={pallette.error} />
-          <Text style={styles.errorText}>Location Error</Text>
-          <Text style={styles.errorSubText}>{locationError}</Text>
+          <Text style={styles.errorText}>Waiting for Location</Text>
+          <Text style={styles.errorSubText}>Please enable location services to get local news</Text>
           <TouchableOpacity 
-            style={styles.retryButton} 
-            onPress={handleRefresh}
+            style={styles.filterButtonEmpty} 
+            onPress={() => setShowFilterModal(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.retryButtonText}>Retry Location</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.continueButton} 
-            onPress={() => loadPublishedNews()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.continueButtonText}>Continue Without Location</Text>
+            <Text style={styles.filterButtonEmptyText}>Select District Manually</Text>
           </TouchableOpacity>
         </View>
+        <FilterModal 
+          showFilterModal={showFilterModal}
+          setShowFilterModal={setShowFilterModal}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedNewsType={selectedNewsType}
+          setSelectedNewsType={setSelectedNewsType}
+          selectedPriority={selectedPriority}
+          setSelectedPriority={setSelectedPriority}
+          selectedLocation={selectedDistrict}
+          setSelectedLocation={setSelectedDistrict}
+          locations={districts}
+          clearFilters={clearFilters}
+          applyFilters={applyFilters}
+        />
       </SafeAreaView>
     );
   }
@@ -864,12 +828,11 @@ const renderItem = useCallback(({ item }) => {
         <View style={styles.emptyContainer}>
           <Icon name="newspaper" size={60} color={pallette.grey} />
           <Text style={styles.emptyText}>No news available</Text>
-          {/* {fullLocation && fullLocation !== 'Fetching...' && (
-            <Text style={styles.locationText}>Location: {fullLocation}</Text>
-          )} */}
-          {locationError && (
-            <Text style={styles.errorSubText}>{locationError}</Text>
-          )}
+          <Text style={styles.locationText}>
+            {selectedDistrict ? `District: ${selectedDistrict}` : 
+             coordinates ? `Location: ${coordinates.latitude.toFixed(4)}, ${coordinates.longitude.toFixed(4)}` : 
+             'No location set'}
+          </Text>
           <TouchableOpacity 
             style={styles.filterButtonEmpty} 
             onPress={() => setShowFilterModal(true)}
@@ -877,15 +840,6 @@ const renderItem = useCallback(({ item }) => {
           >
             <Text style={styles.filterButtonEmptyText}>Try different filters</Text>
           </TouchableOpacity>
-          {locationError && (
-            <TouchableOpacity 
-              style={styles.retryButton} 
-              onPress={handleRefresh}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.retryButtonText}>Retry Location</Text>
-            </TouchableOpacity>
-          )}
         </View>
         <FilterModal 
           showFilterModal={showFilterModal}
@@ -942,26 +896,13 @@ const renderItem = useCallback(({ item }) => {
         }
       />
 
-      {/* Fixed Bottom Advertisement Banner - shows less frequently */}
-      {/* <AdvertisementComponent
-        position="bottom"
-        frequency={5} // Show after every 5 news swipes
-        currentNewsIndex={currentIndex}
-        onAdClicked={(ad) => console.log('Bottom ad clicked:', ad.title)}
-        onAdClosed={(ad) => console.log('Bottom ad closed:', ad.title)}
-        onAdImpression={(ad) => console.log('Bottom ad shown:', ad.title)}
-        testMode={false}
-        showCloseButton={true}
-      /> */}
-
       <CommentsPanel 
         showComments={showComments}
         toggleComments={() => setShowComments(!showComments)}
         currentNewsId={currentNewsId}
         onCommentAdded={() => {
-    // This triggers NewsItem to reload action bar
-    setRefreshActionBar(prev => prev + 1);
-  }}
+          setRefreshActionBar(prev => prev + 1);
+        }}
       />
       
       <FilterModal 
@@ -973,10 +914,9 @@ const renderItem = useCallback(({ item }) => {
         setSelectedNewsType={setSelectedNewsType}
         selectedPriority={selectedPriority}
         setSelectedPriority={setSelectedPriority}
-         selectedLocation={selectedDistrict}
+        selectedLocation={selectedDistrict}
         setSelectedLocation={setSelectedDistrict}
         locations={districts}
-        
         clearFilters={clearFilters}
         applyFilters={applyFilters}
       />

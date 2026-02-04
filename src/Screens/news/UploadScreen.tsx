@@ -20,7 +20,10 @@ import { medium, bold, regular } from '../helpers/fonts';
 import ToastMessage from '../helpers/ToastMessage';
 import CustomDropdown from '../helpers/DropdownItem';
 import MainHeader from '../helpers/mainheader';
+// 
 import { useAppContext } from '../../Store/contexts/app-context';
+import LocationDropdown from '../news screen/filter/LocationDropdown';
+import apiService from '../../Axios/Api';
 
 // Your API base URL
 const API_BASE_URL = 'https://e2a7b1160093.ngrok-free.app/api/';
@@ -38,7 +41,7 @@ const UploadScreen = () => {
   const [categoryType, setCategoryType] = useState('');
   const [headline, setHeadline] = useState('');
   const [content, setContent] = useState('');
-  const [district, setDistrict] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState(''); // Changed from district to selectedLocation
   
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -62,6 +65,71 @@ const UploadScreen = () => {
     { label: 'Health', value: 'HEALTH' },
     { label: 'Education', value: 'EDUCATION' },
     { label: 'Crime', value: 'CRIME' },
+  ];
+
+  const locations = [
+    // Andhra Pradesh
+    { id: 1, name: 'Alluri Sitharama Raju', code: 'ASR' },
+    { id: 2, name: 'Anakapalli', code: 'AKP' },
+    { id: 3, name: 'Ananthapuramu', code: 'ATP' },
+    { id: 4, name: 'Annamayya', code: 'ANN' },
+    { id: 5, name: 'Bapatla', code: 'BPT' },
+    { id: 6, name: 'Chittoor', code: 'CTR' },
+    { id: 7, name: 'Dr. B.R. Ambedkar Konaseema', code: 'KNS' },
+    { id: 8, name: 'East Godavari', code: 'EGD' },
+    { id: 9, name: 'Eluru', code: 'ELR' },
+    { id: 10, name: 'Guntur', code: 'GNT' },
+    { id: 11, name: 'Kakinada', code: 'KKD' },
+    { id: 12, name: 'Krishna', code: 'KRS' },
+    { id: 13, name: 'Kurnool', code: 'KNL' },
+    { id: 14, name: 'Manyam', code: 'MNM' },
+    { id: 15, name: 'Nandyal', code: 'NDL' },
+    { id: 16, name: 'Nellore', code: 'NLR' },
+    { id: 17, name: 'NTR', code: 'NTR' },
+    { id: 18, name: 'Palnadu', code: 'PLD' },
+    { id: 19, name: 'Parvathipuram Manyam', code: 'PVM' },
+    { id: 20, name: 'Prakasam', code: 'PKM' },
+    { id: 21, name: 'Srikakulam', code: 'SKL' },
+    { id: 22, name: 'Sri Sathya Sai', code: 'SSS' },
+    { id: 23, name: 'Tirupati', code: 'TPT' },
+    { id: 24, name: 'Visakhapatnam', code: 'VSK' },
+    { id: 25, name: 'Vizianagaram', code: 'VZM' },
+    { id: 26, name: 'West Godavari', code: 'WGD' },
+    { id: 27, name: 'YSR Kadapa', code: 'KDP' },
+    // Telangana
+    { id: 28, name: 'Adilabad', code: 'ADB' },
+    { id: 29, name: 'Bhadradri Kothagudem', code: 'BKG' },
+    { id: 30, name: 'Hanumakonda', code: 'HMK' },
+    { id: 31, name: 'Hyderabad', code: 'HYD' },
+    { id: 32, name: 'Jagtial', code: 'JTL' },
+    { id: 33, name: 'Jangaon', code: 'JGN' },
+    { id: 34, name: 'Jayashankar Bhupalpally', code: 'JBP' },
+    { id: 35, name: 'Jogulamba Gadwal', code: 'JGD' },
+    { id: 36, name: 'Kamareddy', code: 'KMR' },
+    { id: 37, name: 'Karimnagar', code: 'KRM' },
+    { id: 38, name: 'Khammam', code: 'KMM' },
+    { id: 39, name: 'Komaram Bheem Asifabad', code: 'KBA' },
+    { id: 40, name: 'Mahabubabad', code: 'MBD' },
+    { id: 41, name: 'Mahabubnagar', code: 'MBN' },
+    { id: 42, name: 'Mancherial', code: 'MCL' },
+    { id: 43, name: 'Medak', code: 'MDK' },
+    { id: 44, name: 'Medchal–Malkajgiri', code: 'MMG' },
+    { id: 45, name: 'Mulugu', code: 'MLG' },
+    { id: 46, name: 'Nagarkurnool', code: 'NGK' },
+    { id: 47, name: 'Nalgonda', code: 'NLG' },
+    { id: 48, name: 'Narayanpet', code: 'NRP' },
+    { id: 49, name: 'Nirmal', code: 'NRM' },
+    { id: 50, name: 'Nizamabad', code: 'NZB' },
+    { id: 51, name: 'Peddapalli', code: 'PDP' },
+    { id: 52, name: 'Rajanna Sircilla', code: 'RSC' },
+    { id: 53, name: 'Ranga Reddy', code: 'RRD' },
+    { id: 54, name: 'Sangareddy', code: 'SGR' },
+    { id: 55, name: 'Siddipet', code: 'SDP' },
+    { id: 56, name: 'Suryapet', code: 'SRP' },
+    { id: 57, name: 'Vikarabad', code: 'VKB' },
+    { id: 58, name: 'Wanaparthy', code: 'WNP' },
+    { id: 59, name: 'Warangal', code: 'WRG' },
+    { id: 60, name: 'Yadadri Bhuvanagiri', code: 'YBG' },
   ];
 
   // Media picker function
@@ -102,6 +170,11 @@ const UploadScreen = () => {
 
     if (!content.trim()) {
       showAlert('Please enter content');
+      return false;
+    }
+
+    if (!selectedLocation) {
+      showAlert('Please select a location');
       return false;
     }
 
@@ -167,6 +240,7 @@ const UploadScreen = () => {
           name: mediaFile.name
         });
       }
+  
       // Make fetch request
       const response = await fetch(
         `https://backend.newsvelugu.com/api/admin/news/upload?userId=${userId}`,
@@ -174,14 +248,13 @@ const UploadScreen = () => {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            // Don't set Content-Type manually for FormData
-            // Let the browser set it with boundary
           },
           body: formData,
         }
       );
-       console.log(mediaFile);
-        console.log(formData);
+       
+      console.log('Media file:', mediaFile);
+      console.log('Form data:', formData);
 
       // Check response status
       if (!response.ok) {
@@ -220,7 +293,7 @@ const UploadScreen = () => {
         content: content.trim(),
         newsType: newsType,
         category: categoryType,
-        district: district.trim() || null,
+        district: selectedLocation.trim() || null, // Use selectedLocation
       };
 
       console.log('Submitting news:', newsData);
@@ -260,7 +333,7 @@ const UploadScreen = () => {
     setCategoryType('');
     setHeadline('');
     setContent('');
-    setDistrict('');
+    setSelectedLocation(''); // Reset selectedLocation
   };
 
   // Handle toast close
@@ -347,17 +420,16 @@ const UploadScreen = () => {
           textAlignVertical="top"
         />
 
-        {/* District (Optional) */}
-        <Text style={styles.label}>District (Optional)</Text>
-        <Text style={styles.subLabel}>e.g., Hyderabad, Warangal</Text>
-        <TextInput
-          style={styles.input}
-          value={district}
-          onChangeText={setDistrict}
-          placeholder="Enter district name"
-          placeholderTextColor={pallette.grey}
-          editable={!loading}
-        />
+        {/* Location Dropdown */}
+        <Text style={styles.label}>Location *</Text>
+        <Text style={styles.subLabel}>Select a district from Andhra Pradesh or Telangana</Text>
+        <View style={styles.filterSection}>
+          <LocationDropdown
+            selectedLocation={selectedLocation}
+            setSelectedLocation={setSelectedLocation}
+            locations={locations}
+          />
+        </View>
 
         {/* News Type Dropdown */}
         <Text style={styles.label}>News Type *</Text>
@@ -461,6 +533,15 @@ const styles = StyleSheet.create({
   activeText: {
     color: pallette.primary,
     fontFamily: bold,
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontFamily: medium,
+    color: pallette.black,
+    marginBottom: 12,
   },
   preview: {
     width: '100%',

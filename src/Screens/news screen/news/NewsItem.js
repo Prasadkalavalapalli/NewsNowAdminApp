@@ -193,6 +193,7 @@ const NewsItem = React.memo(({
     try {
       setLoadingShare(true);
       
+       await apiService.shareNews(item.id, userId);
       // Optimistic update
       setShareCount(prev => prev + 1);
       
@@ -604,11 +605,10 @@ const NewsItem = React.memo(({
             <Text style={styles.overlayText}> {item.username || "Reporter"}</Text>
             <Text style={styles.overlaySeparator}> • </Text>
             <Icon name="location-dot" size={12} color={pallette.white} />
-            <Text style={styles.overlayText}> {item.location || "Hyderabad (D)"}</Text>
+            <Text style={styles.overlayText}> {item.district || "Hyderabad (D)"}</Text>
           </View>
         </View>
       </View>
-
       <View style={styles.contentContainer}>
         {/* Headline - Only headline in content section */}
         <Text style={styles.headline}>{item.headline}</Text>

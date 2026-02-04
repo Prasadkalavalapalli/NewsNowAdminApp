@@ -40,14 +40,37 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
         throw new Error('User ID not found');
       }
       
-      const params = {
-        userId: userId,
-        status: 'PUBLISHED',
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
+      const formatDateToYMD = (dateString) => {
+  if (!dateString) return null;
+  
+  // If already in YYYY-MM-DD format, return as is
+  if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString;
+  }
+  
+  // If it's ISO format, extract YYYY-MM-DD
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return null;
+  }
+};
+
+    const params = {
+  userId: userId,
+  status: 'PUBLISHED',
+     ...(dateFilter.startDate && { dateFilter:'CUSTOM'}), // Use the actual filter value
+  ...(dateFilter.startDate && { fromDate: formatDateToYMD(dateFilter.startDate) }),
+  ...(dateFilter.endDate && { toDate: formatDateToYMD(dateFilter.endDate) }),
+  page: 1,
+  limit: 20,
+};
+
       
       const response = await apiService.getAllNews(params);
       
@@ -91,7 +114,7 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
   const handleDeleteNews = (newsItem) => {
     Alert.alert(
       'Delete News',
-      `Are you sure you want to delete "${newsItem.headline}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${newsItem.headline}"? `,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -155,6 +178,8 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
     );
   };
 
+  console.log(verifiedNews)
+
   // Render stats row with delete icon
   const renderStats = (item) => {
     return (
@@ -211,18 +236,21 @@ const VerifiedNewsScreen = ({ dateFilter }) => {
       {/* Categories */}
       {renderCategories(item.categories || [item.category] || ['Politics', 'Local News', 'Breaking News'])}
       
-         {user?.role?.toLocaleLowerCase()==='admin'?<View>
-       {/* Delete Icon */}
-        <TouchableOpacity
-          style={styles.deleteIconContainer}
-          onPress={(e) => {
-            e.stopPropagation();
-            handleDeleteNews(item);
-          }}
-          activeOpacity={0.7}
-        >
-          <Icon name="trash-can" size={adjust(16)} color={pallette.red} />
-        </TouchableOpacity></View>:null}
+        {user?.role?.toLowerCase() === 'admin' && 
+ item.uploadedAt?.includes(new Date().toISOString().split('T')[0]) ? (
+  <View>
+    <TouchableOpacity
+      style={styles.deleteIconContainer}
+      onPress={(e) => {
+        e.stopPropagation();
+        handleDeleteNews(item);
+      }}
+      activeOpacity={0.7}
+    >
+      <Icon name="trash-can" size={adjust(16)} color={pallette.red} />
+    </TouchableOpacity>
+  </View>
+) : null}
       {/* Separator */}
       {/* <View style={styles.cardSeparator} /> */}
     </TouchableOpacity>

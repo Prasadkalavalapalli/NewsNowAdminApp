@@ -40,15 +40,37 @@ const RejectedNewsScreen = ({ dateFilter }) => {
         throw new Error('User ID not found');
       }
       
-      // Build parameters according to your API endpoint
-      const params = {
-        userId: userId,
-        status: 'REJECTED',
-        ...(dateFilter.startDate && { startDate: dateFilter.startDate }),
-        ...(dateFilter.endDate && { endDate: dateFilter.endDate }),
-        page: 1,
-        limit: 20,
-      };
+     const formatDateToYMD = (dateString) => {
+  if (!dateString) return null;
+  
+  // If already in YYYY-MM-DD format, return as is
+  if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString;
+  }
+  
+  // If it's ISO format, extract YYYY-MM-DD
+  try {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return null;
+  }
+};
+
+    const params = {
+  userId: userId,
+  status: 'REJECTED',
+     ...(dateFilter.startDate && { dateFilter:'CUSTOM'}), // Use the actual filter value
+  ...(dateFilter.startDate && { fromDate: formatDateToYMD(dateFilter.startDate) }),
+  ...(dateFilter.endDate && { toDate: formatDateToYMD(dateFilter.endDate) }),
+  page: 1,
+  limit: 20,
+};
+
       
       const response = await apiService.getAllNews(params);
       
@@ -141,16 +163,18 @@ const RejectedNewsScreen = ({ dateFilter }) => {
       <View style={styles.cardSeparator} />
 
       {/* Edit Icon - Bottom Right */}
-      <TouchableOpacity
-        style={styles.editIconContainer}
-        onPress={(e) => {
-          e.stopPropagation(); // Prevent triggering the card press
-          handleEditPress(item);
-        }}
-        activeOpacity={0.7}
-      >
-        <Icon name="pen-to-square" size={18} color={pallette.primary} />
-      </TouchableOpacity>
+        {item.uploadedAt?.includes(new Date().toISOString().split('T')[0]) && (
+          <TouchableOpacity
+            style={styles.editIconContainer}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleEditPress(item);
+            }}
+            activeOpacity={0.7}
+          >
+            <Icon name="pen-to-square" size={18} color={pallette.primary} />
+          </TouchableOpacity>
+        )}
     </TouchableOpacity>
   );
 

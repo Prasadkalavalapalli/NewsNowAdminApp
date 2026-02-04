@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden', // Important: makes logo stay within circle
     borderWidth: 3, // Optional: border for visual effect
-    borderColor: pallette.primary, // Optional: border color
+    borderColor: '#990000' // Optional: border color
   },
   logo: {
     width: '100%',   // Fill the circle container

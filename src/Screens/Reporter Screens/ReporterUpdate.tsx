@@ -118,7 +118,7 @@ const ReporterUpdate = () => {
           idProofType: reporter.idProofType?.toLowerCase() || 'aadhar',
           idProofNumber: reporter.idProofNumber || '',
           experience: reporter.experience?.toString() || '',
-          specialization: reporter.specialization?.[0] || reporter.specialization || '',
+          specialization: reporter.specialization || reporter.specialization || '',
         };
 
         setFormData(formattedData);
@@ -245,7 +245,7 @@ const ReporterUpdate = () => {
         address: formData.address,
         city: formData.city,
         state: formData.state,
-        zipCode: formData.pincode,
+        zipCode: formData.zipcode,
         idProofType: formData.idProofType,
         idProofNumber: formData.idProofNumber,
         experience: formData.experience ? parseInt(formData.experience) : 0,
@@ -438,7 +438,7 @@ const ReporterUpdate = () => {
           contentContainerStyle={styles.scrollContent}
         >
           {/* Header Section */}
-          <View style={styles.headerSection}>
+          {/* <View style={styles.headerSection}>
             <Text style={styles.subtitle}>Update reporter information</Text>
             
             {hasChanges() && (
@@ -451,7 +451,7 @@ const ReporterUpdate = () => {
                 <Text style={styles.resetText}>Reset Changes</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </View> */}
 
           {/* Personal Information */}
           <View style={styles.section}>
@@ -463,7 +463,7 @@ const ReporterUpdate = () => {
             {renderInput('Full Name', 'fullName', 'Enter full name')}
             {renderInput('Email Address', 'email', 'example@email.com', 'email-address')}
             {renderInput('Phone Number', 'mobileNumber', 'Enter 10-digit number', 'phone-pad')}
-            {renderInput('Address', 'address', 'Complete address')}
+            {/* {renderInput('Address', 'address', 'Complete address')} */}
             
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>

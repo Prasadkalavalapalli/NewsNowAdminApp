@@ -38,7 +38,7 @@ const NewsList = () => {
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [dateFilter, setDateFilter] = useState({
-    filter: '7days',
+    filter: 'all',
     startDate: null,
     endDate: null,
   });
@@ -104,7 +104,7 @@ const NewsList = () => {
         <DateRangeFilter
           onFilterChange={handleDateFilterChange}
           buttonText="Date"
-          initialFilter="7days"
+          initialFilter="all"
         />
       </View>
       <TopTabs

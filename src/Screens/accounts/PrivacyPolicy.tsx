@@ -20,15 +20,20 @@ import Toast from "react-native-toast-message";
 // CONSTANTS
 // =============================================================================
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 /**
  * Company contact information constants
  */
 const COMPANY_CONTACT = {
-  email: "newsnow@gamil.com",
-  phone: "+91 9876543210",
-  formattedPhone: "+91 9876543210",
-  website: "https://newsnow.com/privacy",
-  dpoEmail: "newsnow@gamil.com"
+  email: "newsnowhelpdesk@gmail.com",
+  phone: "+91 9494750137",
+  formattedPhone: "+91 9494750137",
+  website: "https://newsvelugu.com",
+  dpoEmail: "newsnowhelpdesk@gmail.com",
+  address: "RAMAKONDA VILLAGE, PENDEKAL RS POST, TUGGALI MANDAL , KURNOOL DISTRICT, ANDHRA PRADESH "
 };
 
 /**
@@ -396,15 +401,20 @@ const styles = StyleSheet.create({
     borderBottomColor: pallette.lightgrey,
   },
   logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 35,
-    justifyContent: "center",
-    alignItems: "center",
+     width: 70,  // Make it circular (same width and height)
+    height:70, // Make it circular (same width and height)
+    borderRadius: 30, // Half to make perfect circle
+    backgroundColor: pallette.white, // Optional: add background if needed
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden', // Important: makes logo stay within circle
+    borderWidth: 3, // Optional: border for visual effect
+    borderColor: '#990000'
+    
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height:100,
   },
   pageTitle: {
     fontSize: adjust(18),

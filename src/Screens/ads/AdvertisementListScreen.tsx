@@ -43,7 +43,7 @@ const AdvertisementListScreen = () => {
   const loadAdvertisements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAllAdvertisements(coordinates);
+      const response = await apiService.getAllAdvertisements();
       console.log('API Response:', response);
       
       if (response.error === false) {
@@ -259,13 +259,13 @@ const AdvertisementListScreen = () => {
           </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() => handleEdit(advertisement)}
         >
           <Icon name="pen-to-square" size={14} color={pallette.white} />
           <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         
         <TouchableOpacity
           style={[styles.actionButton, styles.deleteButton]}

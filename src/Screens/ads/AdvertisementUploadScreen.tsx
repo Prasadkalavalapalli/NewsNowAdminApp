@@ -24,6 +24,8 @@ import { regular, medium, semibold, bold } from '../helpers/fonts';
 import ToastMessage from '../helpers/ToastMessage';
 import MainHeader from '../helpers/mainheader';
 import CustomDropdown from '../helpers/DropdownItem';
+import Toast from 'react-native-toast-message';
+
 
 const AdvertisementUploadScreen = () => {
   const navigation = useNavigation();
@@ -59,14 +61,70 @@ const AdvertisementUploadScreen = () => {
   // District selection
   const [selectedDistricts, setSelectedDistricts] = useState(['All Districts']);
   const districtOptions = [
-    'All Districts',
-    'Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem',
-    'Tirunelveli', 'Vellore', 'Erode', 'Thoothukudi', 'Dindigul',
-    'Thanjavur', 'Ranipet', 'Sivaganga', 'Karur', 'Krishnagiri',
-    'Namakkal', 'Kanyakumari', 'Theni', 'Tirupur', 'Viluppuram',
-    'Kanchipuram', 'Cuddalore', 'Nagapattinam', 'Tiruvannamalai',
-    'Ramanathapuram', 'Perambalur', 'Ariyalur', 'Pudukkottai', 'Dharmapuri'
-  ];
+  'All Districts',
+  // Andhra Pradesh
+  'Alluri Sitharama Raju',
+  'Anakapalli',
+  'Ananthapuramu',
+  'Annamayya',
+  'Bapatla',
+  'Chittoor',
+  'Dr. B.R. Ambedkar Konaseema',
+  'East Godavari',
+  'Eluru',
+  'Guntur',
+  'Kakinada',
+  'Krishna',
+  'Kurnool',
+  'Manyam',
+  'Nandyal',
+  'Nellore',
+  'NTR',
+  'Palnadu',
+  'Parvathipuram Manyam',
+  'Prakasam',
+  'Srikakulam',
+  'Sri Sathya Sai',
+  'Tirupati',
+  'Visakhapatnam',
+  'Vizianagaram',
+  'West Godavari',
+  'YSR Kadapa',
+  // Telangana
+  'Adilabad',
+  'Bhadradri Kothagudem',
+  'Hanumakonda',
+  'Hyderabad',
+  'Jagtial',
+  'Jangaon',
+  'Jayashankar Bhupalpally',
+  'Jogulamba Gadwal',
+  'Kamareddy',
+  'Karimnagar',
+  'Khammam',
+  'Komaram Bheem Asifabad',
+  'Mahabubabad',
+  'Mahabubnagar',
+  'Mancherial',
+  'Medak',
+  'Medchal–Malkajgiri',
+  'Mulugu',
+  'Nagarkurnool',
+  'Nalgonda',
+  'Narayanpet',
+  'Nirmal',
+  'Nizamabad',
+  'Peddapalli',
+  'Rajanna Sircilla',
+  'Ranga Reddy',
+  'Sangareddy',
+  'Siddipet',
+  'Suryapet',
+  'Vikarabad',
+  'Wanaparthy',
+  'Warangal',
+  'Yadadri Bhuvanagiri'
+];
 
   // Dropdown options
   const typeOptions = [
@@ -83,59 +141,78 @@ const AdvertisementUploadScreen = () => {
   }, [advertisementId, isEdit]);
 
   const fetchAdvertisementDetails = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
+  try {
+    setLoading(true);
+    const token = await AsyncStorage.getItem('token');
+    
+    if (!token) {
+      showAlert('Please login again');
+      navigation.goBack();
+      return;
+    }
+
+    const response = await fetch(
+      `https://backend.newsvelugu.com/api/ads/${advertisementId}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       }
+    );
 
-      const response = await fetch(
-        `https://backend.newsvelugu.com/api/admin/advertisements/${advertisementId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 401) {
+        showAlert('Session expired. Please login again.');
+        await AsyncStorage.removeItem('token');
+        navigation.goBack();
+        return;
       }
+      throw new Error(`HTTP ${response.status}`);
+    }
 
-      const data = await response.json();
+    const data = await response.json();
+    
+    if (data.error === false) {
+      const ad = data.data;
+      setType(ad.type || 'BANNER');
+      setTitle(ad.title || '');
+      setDescription(ad.description || '');
+      setCtaText(ad.ctaText || '');
+      setLinkUrl(ad.linkUrl || '');
+      setBackgroundColor(ad.backgroundColor || '#000000');
+      setTextColor(ad.textColor || '#FFFFFF');
+      setDisplayAfterNews(ad.displayAfterNews?.toString() || '7');
+      setStartDate(ad.startDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
+      setEndDate(ad.endDate?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+      setIsActive(ad.isActive !== undefined ? ad.isActive : true);
       
-      if (data.error === false) {
-        const ad = data.data;
-        setType(ad.type || 'BANNER');
-        setTitle(ad.title || '');
-        setDescription(ad.description || '');
-        setCtaText(ad.ctaText || '');
-        setLinkUrl(ad.linkUrl || '');
-        setBackgroundColor(ad.backgroundColor || '#000000');
-        setTextColor(ad.textColor || '#FFFFFF');
-        setDisplayAfterNews(ad.displayAfterNews?.toString() || '7');
-        setStartDate(ad.startDate?.split('T')[0] || new Date().toISOString().split('T')[0]);
-        setEndDate(ad.endDate?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-        setIsActive(ad.isActive !== undefined ? ad.isActive : true);
-        setSelectedDistricts(ad.districts || ['All Districts']);
-        
-        if (ad.imageUrl) {
-          setMediaUri(ad.imageUrl);
+      // Handle district - could be string or array
+      if (ad.district) {
+        // If it's a string, split by comma to get array
+        if (typeof ad.district === 'string') {
+          setSelectedDistricts(ad.district.split(',').filter(d => d.trim()));
+        } else if (Array.isArray(ad.districts)) {
+          setSelectedDistricts(ad.districts);
         }
       } else {
-        throw new Error(data.message || 'Failed to fetch advertisement');
+        setSelectedDistricts(['All Districts']);
       }
-    } catch (error) {
-      console.error('Fetch advertisement error:', error);
-      showAlert(error.message || 'Failed to load advertisement details');
-    } finally {
-      setLoading(false);
+      
+      if (ad.mediaUrl) {
+        setMediaUri(ad.mediaUrl);
+      }
+    } else {
+      throw new Error(data.message || 'Failed to fetch advertisement');
     }
-  };
+  } catch (error) {
+    console.error('Fetch advertisement error:', error);
+    showAlert(error.message || 'Failed to load advertisement details');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Media picker function
   const pickMedia = async () => {
@@ -177,10 +254,10 @@ const AdvertisementUploadScreen = () => {
       return false;
     }
 
-    if (!ctaText.trim()) {
-      showAlert('Please enter call to action text');
-      return false;
-    }
+    // if (!ctaText.trim()) {
+    //   showAlert('Please enter call to action text');
+    //   return false;
+    // }
 
     if (!linkUrl.trim()) {
       showAlert('Please enter link URL');
@@ -244,111 +321,102 @@ const AdvertisementUploadScreen = () => {
       setSelectedDistricts(newDistricts);
     }
   };
-
+const checkAndRefreshToken = async () => {
+  const token = await AsyncStorage.getItem('token');
+  if (!token) {
+    showAlert('Please login to continue');
+    navigation.navigate('Login'); // Adjust to your login screen name
+    return null;
+  }
+  return token;
+};
   // Direct API function for uploading advertisement
-  const uploadAdvertisementDirect = async (advertisementData, mediaFile) => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      // Create FormData
-      const formData = new FormData();
-      
-      // Add advertisement data as JSON string
-      const adJSON = JSON.stringify(advertisementData);
-      formData.append('data', adJSON);
-      
-      // Add media file if exists
-      if (mediaFile) {
-        formData.append('media', {
-          uri: mediaFile.uri,
-          type: mediaFile.type,
-          name: mediaFile.name
-        });
-      }
-
-      const url = isEdit 
-        ? `https://backend.newsvelugu.com/api/admin/advertisements/${advertisementId}`
-        : 'https://backend.newsvelugu.com/api/admin/ads';
-
-      const method = isEdit ? 'PUT' : 'POST';
-
-      // Make fetch request
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type manually for FormData
-        },
-        body: formData,
-      });
-
-      // Check response status
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-
-      // Parse response
-      const responseData = await response.json();
-      return responseData;
-      
-    } catch (error) {
-      console.error('Upload advertisement error:', error);
-      throw error;
-    }
-  };
-
-  // Submit advertisement function
-  const submitAdvertisement = async () => {
-    if (!validateForm()) return;
-
+ // Direct API function for uploading advertisement - FIXED
+const uploadAdvertisement = async () => {
+  try {
     setLoading(true);
 
-    try {
-      // Prepare advertisement data
-      const advertisementData = {
-        type: type,
-        title: title.trim(),
-        description: description.trim(),
-        ctaText: ctaText.trim(),
-        linkUrl: linkUrl.trim(),
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        districts: selectedDistricts.length === 0 ? ['All Districts'] : selectedDistricts,
-        isActive: isActive,
-        displayAfterNews: parseInt(displayAfterNews),
-        startDate: startDate,
-        endDate: endDate,
-      };
+    const rawToken = await AsyncStorage.getItem('token');
+    if (!rawToken) throw new Error('Token missing');
 
-      console.log('Submitting advertisement:', advertisementData);
+    const token = rawToken.startsWith('{')
+      ? JSON.parse(rawToken).token
+      : rawToken;
 
-      // Call direct upload function
-      const response = await uploadAdvertisementDirect(advertisementData, mediaFile);
-      
-      if (response.error === false) {
-        setToastMessage(response.message || (isEdit ? 'Advertisement updated successfully!' : 'Advertisement created successfully!'));
-        setToastType('success');
-        setShowToast(true);
-        
-        // Navigate back after success
-        setTimeout(() => {
-          navigation.goBack();
-        }, 2000);
-      } else {
-        showAlert(response.message || 'Failed to submit advertisement');
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      showAlert(error.message || 'Failed to upload advertisement. Please try again.');
-    } finally {
-      setLoading(false);
+    const formData = new FormData();
+
+    // 👇 EXACTLY MATCH @RequestParam names
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('district', selectedDistricts?.join(','));
+    formData.append('linkUrl', linkUrl || '');
+    // ✅ MEDIA URL
+    formData.append('backgroundColor', backgroundColor || '');
+    formData.append('active', String(isActive)); // boolean → string
+
+    // 👇 FILE UPLOAD (optional)
+    if (mediaFile) {
+      formData.append('media', {
+        uri: mediaFile.uri,
+        type: mediaFile.type || 'image/jpeg',
+        name: mediaFile.name || 'advertisement.jpg',
+      } as any);
     }
-  };
+
+    const response = await fetch(
+      'https://backend.newsvelugu.com/api/ads',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // ❌ DO NOT set Content-Type manually
+        },
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Upload failed');
+    }
+
+    console.log('UPLOAD SUCCESS', result);
+  } catch (err: any) {
+    console.error('UPLOAD ERROR:', err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
+
+  // Submit advertisement function
+const submitAdvertisement = async () => {
+  if (!validateForm()) return;
+
+  try {
+    setLoading(true);
+
+    await uploadAdvertisement();
+
+    Toast.show({
+              type: 'success',
+              text1: 'advertisment uploaded successfully'
+              
+             
+            });
+    navigation.goBack();
+  } catch (err) {
+    console.error('UPLOAD ERROR:', err.message);
+    showAlert(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Handle delete
   const handleDelete = () => {
@@ -463,14 +531,14 @@ const AdvertisementUploadScreen = () => {
         </View>
 
         {/* Basic Information */}
-        <Text style={styles.label}>Advertisement Type *</Text>
+       {/* <Text style={styles.label}>Advertisement Type *</Text>
         <CustomDropdown
           items={typeOptions}
           selectedValue={type}
           onValueChange={setType}
           placeholder="Select advertisement type"
           disabled={loading}
-        />
+        /> */}
 
         <Text style={styles.label}>Title *</Text>
         <TextInput
@@ -497,7 +565,7 @@ const AdvertisementUploadScreen = () => {
           textAlignVertical="top"
         />
 
-        <Text style={styles.label}>Call to Action Text *</Text>
+        {/* <Text style={styles.label}>Call to Action Text *</Text>
         <TextInput
           style={styles.input}
           value={ctaText}
@@ -506,7 +574,7 @@ const AdvertisementUploadScreen = () => {
           placeholderTextColor={pallette.grey}
           editable={!loading}
           maxLength={50}
-        />
+        /> */}
 
         <Text style={styles.label}>Link URL *</Text>
         <TextInput
@@ -558,7 +626,7 @@ const AdvertisementUploadScreen = () => {
           editable={!loading}
         />
 
-        <Text style={styles.label}>Start Date *</Text>
+        {/* <Text style={styles.label}>Start Date *</Text>
         <TextInput
           style={styles.input}
           value={startDate}
@@ -576,7 +644,7 @@ const AdvertisementUploadScreen = () => {
           placeholder="YYYY-MM-DD"
           placeholderTextColor={pallette.grey}
           editable={!loading}
-        />
+        /> */}
 
         {/* Color Selection */}
         <Text style={styles.label}>Color Scheme</Text>

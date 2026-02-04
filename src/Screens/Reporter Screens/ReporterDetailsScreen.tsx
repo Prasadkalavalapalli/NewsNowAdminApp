@@ -274,12 +274,12 @@ const { user } = useAppContext();
             </View>
             <View style={styles.statusBadge}>
               <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-              <Text style={styles.statusText}>{getStatusText()}</Text>
+              <Text style={styles.statusText}>{reporter.enabled?'Active':'Suspend'}</Text>
             </View>
           </View>
           
           <Text style={styles.reporterName}>{reporter.name || 'Unnamed Reporter'}</Text>
-          <Text style={styles.reporterId}>ID: {reporter.userId || reporter._id?.substring(0, 8) || 'N/A'}</Text>
+          <Text style={styles.reporterId}>ID: {reporter.id || reporter._id?.substring(0, 8) || 'N/A'}</Text>
           
           <View style={styles.contactButtons}>
             <TouchableOpacity 
@@ -324,7 +324,7 @@ const { user } = useAppContext();
               value={`${reporter.idProofType ? `${reporter.idProofType.toUpperCase()}: ` : ''}${reporter.idProofNumber}`}
             />
           )}
-          <DetailRow icon="calendar" label="Joined" value={formatDate(reporter.createdAt)} />
+          {/* <DetailRow icon="calendar" label="Joined" value={formatDate(reporter.createdAt)} /> */}
           {reporter.experience && (
             <DetailRow icon="briefcase" label="Experience" value={`${reporter.experience} years`} />
           )}
@@ -402,11 +402,11 @@ const styles = StyleSheet.create({
     backgroundColor: pallette.white,
     alignItems: 'center',
     paddingVertical: h * 0.03,
-    marginBottom: h * 0.02,
+    // marginBottom: h * 0.02,
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: h * 0.02,
+    // marginBottom: h * 0.02,
   },
   avatar: {
     width: 100,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   reporterName: {
-    fontSize: adjust(24),
+    fontSize: adjust(20),
     fontFamily: bold,
     color: pallette.black,
     marginBottom: h * 0.005,

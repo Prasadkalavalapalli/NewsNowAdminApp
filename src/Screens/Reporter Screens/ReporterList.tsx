@@ -41,7 +41,7 @@ console.log(reporters)
   const filterOptions = [
     { id: 'all', label: 'All', icon: 'users' },
     { id: 'active', label: 'Active', icon: 'circle-check' },
-    { id: 'pending', label: 'Pending', icon: 'clock' },
+    // { id: 'pending', label: 'Pending', icon: 'clock' },
     { id: 'suspended', label: 'Suspended', icon: 'user-slash' },
   ];
 
