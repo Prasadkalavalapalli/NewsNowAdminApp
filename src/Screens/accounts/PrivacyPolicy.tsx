@@ -284,7 +284,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ title, content, bullets
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../../Asserts/newsfulllogo.png')}
+              source={require('../../Asserts/logo.jpeg')}
               style={styles.logo}
               resizeMode="contain"
             />

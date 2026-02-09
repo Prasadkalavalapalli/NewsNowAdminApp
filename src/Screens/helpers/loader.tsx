@@ -36,7 +36,7 @@ const Loader = () => {
         {/* Center logo - STATIC, NO ROTATION */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../Asserts/newsfulllogo.png')}
+            source={require('../../Asserts/logo.jpeg')}
             style={styles.logo}
             resizeMode="cover"
           />

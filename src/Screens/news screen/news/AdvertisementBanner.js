@@ -33,8 +33,8 @@ const AdvertisementComponent = ({ adNumber = 1, adIndex = 0 }) => {
   const loadAdvertisements = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAllAdvertisements(coordinates);
-      console.log(response.data)
+      const response = await apiService.getAdvertisements(coordinates);
+      console.log('ads',response.data)
       if (response.error === false && response.data && response.data.length > 0) {
         // Map API response to your ad format
         const mappedAds = response.data.map(ad => ({
@@ -42,8 +42,8 @@ const AdvertisementComponent = ({ adNumber = 1, adIndex = 0 }) => {
           type: ad.adType || 'banner',
           title: ad.title || 'Advertisement',
           description: ad.description || '',
-          ctaText: ad.callToAction || 'Learn More',
-          linkUrl: ad.link || ad.url || '',
+          ctaText: ad.linkUrl || 'Learn More',
+          linkUrl: ad.linkUrl|| ad.url || '',
           imageUrl: ad.image || ad.mediaUrl || '',
           backgroundColor: ad.backgroundColor || pallette.l1,
           textColor: ad.textColor || pallette.white,
@@ -104,18 +104,19 @@ const AdvertisementComponent = ({ adNumber = 1, adIndex = 0 }) => {
     }
   }, [advertisements, adNumber, adIndex]);
 
-  const handleAdPress = async () => {
-    if (currentAd?.linkUrl) {
-      try {
-        const canOpen = await Linking.canOpenURL(currentAd.linkUrl);
-        if (canOpen) {
-          await Linking.openURL(currentAd.linkUrl);
-        }
-      } catch (error) {
-        console.error('Failed to open URL:', error);
-      }
-    }
-  };
+ 
+
+const handleAdPress = async () => {
+  if (!currentAd?.linkUrl) return;
+
+  try {
+    await Linking.openURL(currentAd.linkUrl);
+  } catch (error) {
+    console.error('Failed to open URL:', error);
+    Alert.alert('Error', 'Unable to open the link');
+  }
+};
+
 
   const handleClose = () => {
     // Optional: You can add close animation
@@ -134,7 +135,7 @@ const AdvertisementComponent = ({ adNumber = 1, adIndex = 0 }) => {
     // Return empty view if no ads
     return null;
   }
-
+console.log('advertisements',advertisements)
   return (
     <Animated.View 
       style={[

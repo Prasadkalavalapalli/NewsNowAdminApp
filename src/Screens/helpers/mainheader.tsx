@@ -46,7 +46,7 @@ const MainHeader = () => {
           activeOpacity={0.7}
         >
           <Image
-            source={require('../../Asserts/newsfulllogo.png')}
+            source={require('../../Asserts/logo.jpeg')}
             style={styles.logo}
           />
           <View style={styles.brandTextContainer}>

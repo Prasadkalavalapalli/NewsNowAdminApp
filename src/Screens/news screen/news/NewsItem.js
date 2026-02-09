@@ -581,19 +581,19 @@ const NewsItem = React.memo(({
         </TouchableOpacity>
 
         {/* Category Badge - Top Right */}
-        <View style={styles.categoryBadge}>
+        {/* <View style={styles.categoryBadge}>
           <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
+        </View> */}
 
-        {/* newsType Badge - Below Category */}
+        {/* newsType Badge - Below Category
         <View style={styles.newsTypeBadge}>
           <Text style={styles.newsTypeBadgeText}>{item.newsType}</Text>
-        </View>
+        </View> 
 
         {/* Priority Badge - Below newsType */}
-        <View style={styles.priorityBadge}>
+        {/* <View style={styles.priorityBadge}>
           <Text style={styles.priorityText}>{item.priority}</Text>
-        </View>
+        </View>  */}
 
         {/* Reporter/Time/Location Overlay - Bottom Left */}
         <View style={styles.imageInfoOverlay}>
@@ -608,6 +608,18 @@ const NewsItem = React.memo(({
             <Text style={styles.overlayText}> {item.district || "Hyderabad (D)"}</Text>
           </View>
         </View>
+        {/* <View style={styles.imageInfoOverlay2}>
+          <View style={styles.locationTimeRow}>
+             <Text style={styles.overlaySeparator}> • </Text>
+            <Text style={styles.overlayText}> {item.category}</Text>
+            <Text style={styles.overlaySeparator}> • </Text>
+           
+            <Text style={styles.overlayText}> {item.newsType}</Text>
+            <Text style={styles.overlaySeparator}> • </Text>
+            
+            <Text style={styles.overlayText}>{item.priority}</Text>
+          </View>
+        </View> */}
       </View>
       <View style={styles.contentContainer}>
         {/* Headline - Only headline in content section */}
@@ -631,8 +643,8 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     flex: 1,
   },
-  imageContainer: {
-    height: SCREEN_WIDTH * 0.7,
+imageContainer: {
+    height: SCREEN_WIDTH * 0.9,
     position: 'relative',
   },
   newsImage: {
@@ -715,7 +727,18 @@ const styles = StyleSheet.create({
   // Reporter/Time/Location Overlay
   imageInfoOverlay: {
    position: 'absolute',
-  bottom: 20,
+  bottom: 30,
+  left: 20,
+  // backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 10,
+  zIndex: 1000,
+  minWidth: 150,
+  },
+   imageInfoOverlay2: {
+   position: 'absolute',
+  bottom: 10,
   left: 20,
   // backgroundColor: 'rgba(0, 0, 0, 0.7)',
   paddingHorizontal: 12,

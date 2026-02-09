@@ -212,8 +212,8 @@ const UploadScreen = () => {
   const uploadNewsDirect = async (userId, newsData, mediaFile) => {
     try {
       // Get token from AsyncStorage
-      const token = await AsyncStorage.getItem('token');
-      
+      const token = await AsyncStorage.getItem('token')||user?.token;
+      console.log(token)
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -256,6 +256,7 @@ const UploadScreen = () => {
       console.log('Media file:', mediaFile);
       console.log('Form data:', formData);
 
+      console.log('hello',response)
       // Check response status
       if (!response.ok) {
         const errorData = await response.json();
@@ -263,7 +264,7 @@ const UploadScreen = () => {
       }
 
       // Parse response
-      const responseData = await response.json();
+      const responseData = await response.json()||response.text;
       
       console.log('Upload response:', responseData);
       return responseData;

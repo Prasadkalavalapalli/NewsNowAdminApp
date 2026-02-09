@@ -68,7 +68,7 @@ const Splash = ({ navigation }: any) => {
       <Animated.View style={[styles.logoContainer, logoTransform]}>
         <View style={styles.circleContainer}>
           <Image
-            source={require('./../../Asserts/newsfulllogo.png')}
+            source={require('./../../Asserts/logo.jpeg')}
             style={styles.logo}
             resizeMode="cover"
           />

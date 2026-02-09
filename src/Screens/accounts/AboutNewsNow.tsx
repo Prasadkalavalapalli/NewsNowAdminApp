@@ -257,7 +257,7 @@ const AboutNewsNow: React.FC = () => {
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../../Asserts/newsfulllogo.png')}
+              source={require('../../Asserts/logo.jpeg')}
               style={styles.logo}
               resizeMode="contain"
             />

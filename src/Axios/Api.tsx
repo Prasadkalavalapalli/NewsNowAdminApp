@@ -153,10 +153,9 @@ export const apiService = {
       return error;
     }
   },
-  getBannerStats: async (data) => {
+  getBannerStats: async () => {
     try {
       const response = await apiClient.get(`/ads/adscount`)
-      console.log(response)
        return response;
     } catch (error) {
       return error;

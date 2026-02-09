@@ -8,3 +8,19 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+
+# Google Play Services Location
+-keep class com.google.android.gms.location.** { *; }
+-dontwarn com.google.android.gms.location.**
+
+# Keep Google Play Services base
+-keep class com.google.android.gms.common.** { *; }
+-dontwarn com.google.android.gms.common.**
+
+# React Native
+-keep class com.facebook.react.** { *; }
+-dontwarn com.facebook.react.**
+
+# Flipper (safe)
+-dontwarn com.facebook.flipper.**

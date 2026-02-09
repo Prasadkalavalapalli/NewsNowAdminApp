@@ -37,7 +37,7 @@ const Header = ({
           ) : (
             <TouchableOpacity onPress={() => onback()}>
             <Image
-              source={require('../../Asserts/newsfulllogo.png')}
+              source={require('../../Asserts/logo.jpeg')}
               style={styles.logo}
             />
             </TouchableOpacity>
