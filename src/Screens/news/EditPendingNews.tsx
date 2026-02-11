@@ -28,6 +28,11 @@ const newsTypeOptions = [
   { label: 'Local News', value: 'LOCAL' },
   { label: 'National News', value: 'NATIONAL' },
 ];
+const PriorityTypeOptions = [
+  { label: 'Breaking News', value: 'BREAKING NEWS' },
+  { label: 'Flash News', value: 'FLASH NEWS' },
+  { label: 'Ordinary News', value: 'ORDINARY NEWS' },
+];
 
 const categoryOptions = [
   { label: 'Business', value: 'BUSINESS' },
@@ -43,23 +48,54 @@ const categoryOptions = [
 
 const EditPendingNews = ({ route, navigation }) => {
   const { mode, news } = route.params;
-
-  const [headline, setHeadline] = useState(news.headline || '');
-  const [content, setContent] = useState(news.content || '');
-  const [newsType, setNewsType] = useState(news.newsType || 'LOCAL');
-  const [category, setCategory] = useState(news.category || '');
-  const [district, setDistrict] = useState(news.district || '');
+  
+  const [newsData, setNewsData] = useState(null);
+  const [headline, setHeadline] = useState('');
+  const [content, setContent] = useState('');
+  const [newsType, setNewsType] = useState('LOCAL');
+  const [category, setCategory] = useState('');
+  const [priority, setPriority] = useState('BREAKING NEWS');
+  const [district, setDistrict] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [localImage, setLocalImage] = useState(null);
   const [token, setToken] = useState(null);
-const { user } = useAppContext();
+  const { user } = useAppContext();
+console.log(user)
+  const fetchNewsDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.getNewsById(news.newsId);
+      console.log('News details response:', response);
+      if (response.error === false) {
+        setNewsData(response.data);
+        // Initialize form fields with fetched data
+        setHeadline(response.data.headline || '');
+        setContent(response.data.content || '');
+        setNewsType(response.data.newsType || 'LOCAL');
+        setCategory(response.data.category || '');
+        setDistrict(response.data.district || '');
+        setPriority(response.data.priority || 'BREAKING NEWS');
+      } else {
+        throw new Error(response.message || 'Failed to fetch news details');
+      }
+    } catch (error) {
+      console.error('Fetch news error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to load news details',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Get token
+  // Get token and fetch news details
   useEffect(() => {
     const getToken = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem('token')||user?.token;
+        const storedToken = await AsyncStorage.getItem('token') || user?.token;
         setToken(storedToken);
 
         if (!storedToken) {
@@ -71,9 +107,18 @@ const { user } = useAppContext();
           setTimeout(() => {
             navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
           }, 1500);
+          return;
         }
+        
+        // Fetch news details after getting token
+        fetchNewsDetails();
       } catch (error) {
         console.error('Error getting token:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to authenticate',
+        });
       }
     };
     getToken();
@@ -167,7 +212,7 @@ const { user } = useAppContext();
       return false;
     }
 
-    if (mode === 'REJECT' && !reason.trim()) {
+    if ((mode === 'REJECT' || mode === 'REJECTED') && !reason.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
@@ -177,6 +222,79 @@ const { user } = useAppContext();
     }
 
     return true;
+  };
+
+  // Direct fetch API function for uploading news
+  const uploadNewsDirect = async (userId, adminEditRequest, mediaFile) => {
+    try {
+      // Get token
+      const token = await AsyncStorage.getItem('token') || user?.token;
+      console.log('Upload token:', token);
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Create FormData
+      const formData = new FormData();
+      
+      // Add news data as JSON string (FIXED: include priority)
+      const newsJSON = JSON.stringify({
+        headline: adminEditRequest.headline,
+        content: adminEditRequest.content,
+        newsType: adminEditRequest.newsType,
+        category: adminEditRequest.category,
+        district: adminEditRequest.district || null,
+        // priority: newsData.priority || 'ORDINARY NEWS' // Added priority
+      });
+      
+      console.log('News JSON:', newsJSON);
+      formData.append('news', newsJSON);
+      
+      // Add media file if exists
+      if (mediaFile) {
+        console.log('Adding media file:', mediaFile);
+        formData.append('media', {
+          uri: mediaFile.uri,
+          type: mediaFile.type || 'image/jpeg',
+          name: mediaFile.name || `news_${Date.now()}.jpg`
+        });
+      }
+  
+      // Make fetch request
+      const response = await fetch(
+        `https://backend.newsvelugu.com/api/admin/news/upload?userId=${userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+       
+      console.log('Upload response status:', response.status);
+      
+      // Check response status
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { message: `HTTP ${response.status}` };
+        }
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      // Parse response
+      const responseData = await response.json();
+      
+      console.log('Upload response data:', responseData);
+      return responseData;
+      
+    } catch (error) {
+      console.error('Upload news error:', error);
+      throw error;
+    }
   };
 
   // ================= EDIT NEWS FUNCTION =================
@@ -195,37 +313,53 @@ const { user } = useAppContext();
     try {
       setLoading(true);
 
+      // Prepare news data for upload
       const adminEditRequest = {
         headline: headline.trim(),
         content: content.trim(),
         newsType,
         category,
         district: district?.trim() || null,
-        priority: 'BREAKING',
+        priority,
       };
 
-      const editResponse = await apiService.EditNews(news.newsId, adminEditRequest);
-
-      if (editResponse.error === false) {
+      console.log('Uploading new news with data:', adminEditRequest);
+       console.log(user?.userId)
+      // Upload as new news first
+      const uploadResponse = await uploadNewsDirect(user?.userId, adminEditRequest, localImage || imageSource);
+     
+      if (uploadResponse.error === false) {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'News updated successfully'
+          text2: 'News uploaded successfully. Now deleting old news...'
         });
-
-        setTimeout(() => {
-          navigation.goBack();
-          if (route.params?.onSuccess) {
-            route.params.onSuccess();
-          }
-        }, 1200);
+        
+        // Delete old news after successful upload
+        const deleteResponse = await apiService.deleteNews(news.newsId, user?.userId);
+      
+        if (deleteResponse.error === false) {
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'News updated successfully'
+          });
+          
+          setTimeout(() => {
+            navigation.goBack(-1);
+            if (route.params?.onSuccess) {
+              route.params.onSuccess();
+            }
+          }, 2000);
+          
+        } else {
+          throw new Error(deleteResponse.message || 'Failed to delete old news');
+        }
+        
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: editResponse.message || 'Failed to update news'
-        });
+        throw new Error(uploadResponse.message || 'Failed to upload new news');
       }
+
     } catch (error) {
       console.error('Edit news error:', error);
       Toast.show({
@@ -254,8 +388,7 @@ const { user } = useAppContext();
     try {
       setLoading(true);
 
-      const status='Rejected'
-      const rejectResponse = await apiService.rejectNews(news.newsId,reason);
+      const rejectResponse = await apiService.rejectNews(news.newsId, reason);
 
       if (rejectResponse.error === false) {
         Toast.show({
@@ -305,71 +438,53 @@ const { user } = useAppContext();
     try {
       setLoading(true);
 
-      // ---------- FormData ----------
-      const formData = new FormData();
-
-      const adminEditRequest = {
+      // Prepare news data for upload
+      const newsDataToUpload = {
         headline: headline.trim(),
-        // content: content.trim(),
-        // newsType,
-        // category,
-        // district: district?.trim() || null,
-        // priority: 'BREAKING',
+        content: content.trim(),
+        newsType,
+        category,
+        district: district?.trim() || null,
+        priority,
       };
 
-      // IMPORTANT: React Native expects JSON as string (Postman style)
-      formData.append('data', JSON.stringify(adminEditRequest));
+      console.log('Approving/Publishing news with data:', newsDataToUpload);
+      
+      // Upload as new news first
+      const uploadResponse = await uploadNewsDirect(user.userId, newsDataToUpload, localImage || imageSource);
+      
+      if (uploadResponse.error === false) {
+        // Delete old news after successful upload
+        const deleteResponse = await apiService.deleteNews(news.newsId, user?.userId);
+      
+        if (deleteResponse.error === false) {
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'News approved & published successfully'
+          });
 
-      // ---------- Image ----------
-      // if (localImage) {
-      //   formData.append('media', {
-      //     uri: localImage.uri,
-      //     type: localImage.type || 'image/jpeg',
-      //     name: localImage.name || `news_${Date.now()}.jpg`,
-      //   } as any);
-      // }
-
-      console.log('TOKEN:', token);
-      console.log('FORM DATA:', JSON.stringify(adminEditRequest));
-      console.log('IMAGE:', localImage);
-
-      // ---------- API CALL ----------
-      const response = await axios.put(
-        `https://backend.newsvelugu.com/api/admin/${news.newsId}/publish`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-          timeout: 15000,
+          setTimeout(() => {
+            navigation.goBack();
+            if (route.params?.onSuccess) {
+              route.params.onSuccess();
+            }
+          }, 1200);
+          
+        } else {
+          throw new Error(deleteResponse.message || 'Failed to delete old news');
         }
-      );
+        
+      } else {
+        throw new Error(uploadResponse.message || 'Failed to upload new news');
+      }
 
-      console.log('API RESPONSE:', response.data);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'News approved & published',
-      });
-
-      navigation.goBack();
-      route.params?.onSuccess?.();
-
-    } catch (err) {
-      console.error(
-        'Approve/Publish error:',
-        err?.response?.data || err?.message
-      );
-
+    } catch (error) {
+      console.error('Approve/Publish error:', error);
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2:
-          err?.response?.data?.message ||
-          err?.message ||
-          'Something went wrong',
+        text2: error.message || 'Failed to approve and publish news'
       });
     } finally {
       setLoading(false);
@@ -379,7 +494,7 @@ const { user } = useAppContext();
   // ================= SUBMIT ACTION =================
   const submitAction = async () => {
     switch (mode) {
-      case 'edit':
+      case 'Edit':
         await handleEditNews();
         break;
       case 'REJECT':
@@ -387,17 +502,40 @@ const { user } = useAppContext();
         await handleRejectNews();
         break;
       case 'APPROVE':
-      default:
         await handleApprovePublishNews();
         break;
+      default:
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Invalid mode specified'
+        });
+        break;
     }
+  };
+
+  // Helper function to get full media URL
+  const getMediaUrl = (mediaPath) => {
+    if (!mediaPath) return null;
+    if (mediaPath.startsWith('http')) {
+      return mediaPath;
+    }
+    return `https://backend.newsvelugu.com${mediaPath}`;
   };
 
   // ================= IMAGE SOURCE =================
   const getImageSource = () => {
     if (localImage?.uri) return { uri: localImage.uri };
-    if (news.image) return { uri: news.image };
-    if (news.mediaUrl) return { uri: news.mediaUrl };
+    
+    // Try image first, then mediaUrl
+    if (newsData?.image) {
+      return { uri: getMediaUrl(newsData.image) };
+    }
+    
+    if (newsData?.mediaUrl) {
+      return { uri: getMediaUrl(newsData.mediaUrl) };
+    }
+    
     return null;
   };
 
@@ -406,7 +544,7 @@ const { user } = useAppContext();
   // ================= GET TITLE =================
   const getTitle = () => {
     switch (mode) {
-      case 'edit':
+      case 'Edit':
         return 'Edit News';
       case 'REJECT':
       case 'REJECTED':
@@ -421,7 +559,7 @@ const { user } = useAppContext();
   // ================= GET BUTTON TEXT =================
   const getButtonText = () => {
     switch (mode) {
-      case 'edit':
+      case 'Edit':
         return 'Update News';
       case 'REJECT':
       case 'REJECTED':
@@ -433,7 +571,7 @@ const { user } = useAppContext();
     }
   };
 
-  if (!token && !loading) {
+  if (!token || !newsData) {
     return (
       <View style={styles.container}>
         <Header
@@ -445,7 +583,7 @@ const { user } = useAppContext();
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={pallette.primary} />
-          <Text style={styles.loadingText}>Checking authentication...</Text>
+          <Text style={styles.loadingText}>Loading news details...</Text>
         </View>
       </View>
     );
@@ -465,7 +603,7 @@ const { user } = useAppContext();
         <View style={styles.mediaSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Media</Text>
-            {(mode === 'APPROVE' || mode === 'edit') && (
+            {(mode === 'APPROVE' || mode === 'Edit') && (
               <TouchableOpacity style={styles.editMediaButton} onPress={showMediaActionSheet} disabled={loading}>
                 <Icon name="pen-to-square" size={16} color={pallette.primary} />
                 <Text style={styles.editMediaText}>{imageSource ? 'Change Image' : 'Add Image'}</Text>
@@ -490,7 +628,7 @@ const { user } = useAppContext();
                     });
                   }}
                 />
-                {(mode === 'APPROVE' || mode === 'edit') && (
+                {(mode === 'APPROVE' || mode === 'Edit') && (
                   <TouchableOpacity style={styles.changeImageButton} onPress={showMediaActionSheet} disabled={loading}>
                     <Icon name="camera" size={16} color={pallette.white} />
                     <Text style={styles.changeImageText}>Change</Text>
@@ -504,17 +642,17 @@ const { user } = useAppContext();
                 </View>
               )}
             </>
-          ) : news.mediaType === 'VIDEO' && news.mediaUrl ? (
+          ) : newsData.mediaType === 'VIDEO' && newsData.mediaUrl ? (
             <>
               <Text style={styles.mediaLabel}>Video Preview</Text>
-              <Video source={{ uri: news.mediaUrl }} style={styles.media} controls paused />
+              <Video source={{ uri: newsData.mediaUrl }} style={styles.media} controls paused />
               <Text style={styles.videoNote}>Note: Video cannot be edited. Only images can be changed.</Text>
             </>
           ) : (
             <View style={styles.noMediaContainer}>
               <Icon name="image" size={40} color={pallette.lightgrey} />
               <Text style={styles.noMediaText}>No media available</Text>
-              {(mode === 'APPROVE' || mode === 'edit') && (
+              {(mode === 'APPROVE' || mode === 'Edit') && (
                 <TouchableOpacity style={styles.addMediaButton} onPress={showMediaActionSheet} disabled={loading}>
                   <Icon name="plus" size={16} color={pallette.white} />
                   <Text style={styles.addMediaText}>Add Image</Text>
@@ -549,8 +687,6 @@ const { user } = useAppContext();
           editable={!loading}
         />
 
-        
-
         {/* DISTRICT */}
         <Text style={styles.sectionTitle}>District </Text>
         <TextInput
@@ -580,7 +716,6 @@ const { user } = useAppContext();
           </>
         )}
 
-
         {/* NEWS TYPE */}
         <Text style={styles.sectionTitle}>News Type *</Text>
         <CustomDropdown
@@ -599,6 +734,16 @@ const { user } = useAppContext();
           onValueChange={setCategory}
           disabled={loading}
           placeholder="Select category"
+        />
+
+        {/* PRIORITY */}
+        <Text style={styles.sectionTitle}>Priority *</Text>
+        <CustomDropdown
+          items={PriorityTypeOptions}
+          selectedValue={priority}
+          onValueChange={setPriority}
+          disabled={loading}
+          placeholder="Select priority"
         />
 
         {/* ACTION BUTTON */}

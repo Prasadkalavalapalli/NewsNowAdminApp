@@ -108,7 +108,7 @@ const RejectedNewsScreen = ({ dateFilter }) => {
   // Handle edit icon press
   const handleEditPress = (item) => {
     navigation.navigate('EditPendingNews', {
-      mode: "APPROVE",
+      mode: "Edit",
       news: item
     });
   };

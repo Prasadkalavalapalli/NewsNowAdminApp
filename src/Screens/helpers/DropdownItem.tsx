@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -35,8 +35,13 @@ const CustomDropdown: React.FC<Props> = ({
   disabled = false,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
-  const buttonRef = useRef<TouchableOpacity>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ 
+    top: 0, 
+    left: 0, 
+    width: 0,
+    height: 0 
+  });
+  const buttonRef = useRef<View>(null);
 
   const getLabel = (value: string) => {
     return items.find((item) => item.value === value)?.label || value || placeholder || "Select...";
@@ -44,11 +49,29 @@ const CustomDropdown: React.FC<Props> = ({
 
   const measureButton = () => {
     if (buttonRef.current) {
-      buttonRef.current.measure((x, y, width, height, pageX, pageY) => {
+      buttonRef.current.measureInWindow((x, y, width, height) => {
+        // Calculate position relative to screen
+        const screenHeight = Dimensions.get('window').height;
+        const dropdownHeight = Math.min(items.length * 50, 200); // Approximate height
+        
+        // Check if dropdown should appear above or below
+        const spaceBelow = screenHeight - (y + height);
+        const spaceAbove = y;
+        
+        let topPosition;
+        if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+          // Show above the button
+          topPosition = y - dropdownHeight - 4;
+        } else {
+          // Show below the button (default)
+          topPosition = y + height + 4;
+        }
+        
         setDropdownPosition({
-          top: pageY + height + 4,
-          left: pageX,
+          top: topPosition,
+          left: x,
           width: width,
+          height: dropdownHeight
         });
       });
     }
@@ -56,33 +79,59 @@ const CustomDropdown: React.FC<Props> = ({
 
   const handleButtonPress = () => {
     if (disabled) return;
-    measureButton();
+    
+    // Use setTimeout to ensure component is rendered before measuring
+    setTimeout(() => {
+      measureButton();
+    }, 0);
+    
     setShowDropdown(!showDropdown);
   };
 
+  useEffect(() => {
+    if (showDropdown) {
+      // Re-measure when dropdown is shown
+      measureButton();
+    }
+  }, [showDropdown]);
+
+  // Close dropdown when orientation changes
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', () => {
+      if (showDropdown) {
+        setShowDropdown(false);
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [showDropdown]);
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        ref={buttonRef}
-        style={[styles.dropdownButton, disabled && styles.dropdownButtonDisabled]}
-        onPress={handleButtonPress}
-        disabled={disabled}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.dropdownText, disabled && styles.dropdownTextDisabled]}>
-          {getLabel(selectedValue)}
-        </Text>
-        <Icon
-          name={showDropdown ? "chevron-up" : "chevron-down"}
-          size={20}
-          color={disabled ? pallette.mediumgrey : pallette.grey}
-        />
-      </TouchableOpacity>
+      <View ref={buttonRef} collapsable={false}>
+        <TouchableOpacity
+          style={[styles.dropdownButton, disabled && styles.dropdownButtonDisabled]}
+          onPress={handleButtonPress}
+          disabled={disabled}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.dropdownText, disabled && styles.dropdownTextDisabled]}>
+            {getLabel(selectedValue)}
+          </Text>
+          <Icon
+            name={showDropdown ? "chevron-up" : "chevron-down"}
+            size={20}
+            color={disabled ? pallette.mediumgrey : pallette.grey}
+          />
+        </TouchableOpacity>
+      </View>
 
       <Modal
         visible={showDropdown}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setShowDropdown(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
@@ -94,6 +143,7 @@ const CustomDropdown: React.FC<Props> = ({
                   top: dropdownPosition.top,
                   left: dropdownPosition.left,
                   width: dropdownPosition.width,
+                  maxHeight: Dimensions.get('window').height * 0.4,
                 }
               ]}
             >
@@ -102,8 +152,6 @@ const CustomDropdown: React.FC<Props> = ({
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
                 bounces={false}
-                maximumZoomScale={1}
-                minimumZoomScale={1}
               >
                 {items.map((item) => (
                   <TouchableOpacity
@@ -116,13 +164,14 @@ const CustomDropdown: React.FC<Props> = ({
                       onValueChange(item.value);
                       setShowDropdown(false);
                     }}
-                    activeOpacity={0.7}
+                    activeOpacity={0.5}
                   >
                     <Text
                       style={[
                         styles.dropdownItemText,
                         item.value === selectedValue && styles.dropdownItemTextSelected,
                       ]}
+                      numberOfLines={1}
                     >
                       {item.label}
                     </Text>
@@ -145,7 +194,7 @@ export default CustomDropdown;
 const styles = StyleSheet.create({
   container: { 
     width: "100%", 
-    marginBottom: 16,
+    marginBottom: 36,
   },
   dropdownButton: {
     flexDirection: "row",
@@ -168,6 +217,7 @@ const styles = StyleSheet.create({
     color: pallette.black,
     fontFamily: regular,
     flex: 1,
+    textAlign: "left",
   },
   dropdownTextDisabled: {
     color: pallette.mediumgrey,
@@ -182,12 +232,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: pallette.mediumgrey,
     borderRadius: 8,
-    elevation: 8,
+    elevation: 5,
     shadowColor: pallette.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    maxHeight: Dimensions.get('window').height * 0.4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     zIndex: 9999,
   },
   scrollView: {
@@ -199,8 +248,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: pallette.lightgrey,
+    minHeight: 44,
   },
   dropdownItemSelected: {
     backgroundColor: `${pallette.primary}10`,

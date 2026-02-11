@@ -173,10 +173,10 @@ const UploadScreen = () => {
       return false;
     }
 
-    if (!selectedLocation) {
-      showAlert('Please select a location');
-      return false;
-    }
+    // if (!selectedLocation) {
+    //   showAlert('Please select a location');
+    //   return false;
+    // }
 
     if (!newsType) {
       showAlert('Please select news type');

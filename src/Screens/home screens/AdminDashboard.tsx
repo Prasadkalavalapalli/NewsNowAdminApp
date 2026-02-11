@@ -37,7 +37,6 @@ const roleId=(user.role==='REPORTER')?2:1
       setStats(data.data);
       const res = await apiService.getBannerStats();
       SetBanner(res.data);
-      console.log(res.data)
     } catch (err) {
       console.error('Error:', err);
     } finally {
@@ -130,7 +129,7 @@ const todayStats = [
     },
     {
       title: 'Banners',
-      value: banner?.totalCount || 0,
+      value: banner?.activeCount || 0,
       icon: 'bell',
       color: '#00cec9',
       onPress: () => navigation.navigate('AdvertisementList'),

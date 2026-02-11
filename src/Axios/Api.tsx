@@ -146,7 +146,7 @@ export const apiService = {
   // ===== ADMIN DASHBOARD =====
   getDashboardStats: async (data) => {
     try {
-      const response = await apiClient.get(`/admin/news/stats?userId=${data.userId}&roleId=${data.roleId}`);
+      const response = await apiClient.get(`admin/news/stats?userId=${data.userId}&roleId=${data.roleId}`);
       console.log(response)
        return response;
     } catch (error) {
